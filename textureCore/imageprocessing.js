@@ -90,12 +90,17 @@ function classify(arr){
     var stdVal = std(getLineDistanceArr(arr));
 
     console.log("aver line height: "+mean_line_height+", std: "+stdVal);
+    console.log(arr);
     /* If the std is smaller than the average mean of line heights, 
        then return the same arr (no need to classify again because the line heights
        are smaller than the distances between the lines)
+       or if the stdVal is the same as the previous round (which means there is no chance of change)
        or if the number of lines in arr is one
      */
-    if(stdVal<mean_line_height || arr.length<=2){
+    if(stdVal<mean_line_height/2 
+        || arr.length<=2
+        //|| ( ( arr[0].stdVal) && arr[0].stdVal != stdVal)
+    ){
         return arr;
     }else{
         // Otherwise, for each line, gather them into arrays of groups based on 
@@ -122,7 +127,7 @@ function classify(arr){
         var curr_group_index = 0;
 
         //Create groups based on modes
-        var i=1;
+        var i=1;    //The var that points to which element we want to group
         while(i<arr.length-1){
             //Current group mode e.g. greater_than_std, etc
             var curr_group_mode = getLineMode(arr[i], arr[i+1], stdVal, curr_max_diff);
@@ -136,32 +141,41 @@ function classify(arr){
                 IF curr and prev are of the same group, 
                 then add arr[i] to the curr_group_index.
                 ELSE then it is a new group we create. 
-                but first we add arr[i] to the curr_group_index.
                 then we create the new group   
                 set prev_group_mode into the current one
                 curr_group_index++. 
             */
 
-            if(_.isEqual(prev_group_mode, curr_group_mode)){
+            if(_.isEqual(prev_group_mode, curr_group_mode) ){
                 //Adding a line to the current group
                 group[curr_group_index].group.push(arr[i]);
+
             }else{
-                //First we add current elem to the current group before creating 
-                //a new group
+                //Creating a new group
+                group.push({'type':curr_group_mode, 'group': [ ] });
+
+                /* We add current elem to a group.
+                   Which group does current element belong to??
+                   It's previous one if prev group mode is smaller than std
+                   It's the one after that if curr group mode is greater than std
+                   which indicates a break.
+                 */
+                if(! _.isEqual(prev_group_mode, 'smaller_equal_to_std')){
+                    //This only happens when the the prev group mode isn;t smaller _equal_to_std
+                    //Update our current group pointer, in order to add to the next group
+                    curr_group_index++;
+                }
+                //Add to current group
                 group[curr_group_index].group.push(arr[i]);
 
                 //Setting the prev_group_mode to the current one, which would be
                 //valid for the next iteration
                 prev_group_mode = curr_group_mode;
-
-                //Creating a new group
-                group.push({'type':curr_group_mode, 'group': [ ] });
-
-                //And updating out current group pointer
-                curr_group_index++;
+                
             } 
-            
+
             i++;
+
         }
 
         //Once this loop this over, arr is left with the last element 
@@ -169,10 +183,17 @@ function classify(arr){
         group[curr_group_index].group.push(arr[i]);
 
         //Once all the groups are created, for each group, classify.
-        /*for(var j=0; j<group.length; j++){
-            var clone_elem = _.clone(group[j], true);
-            group[j].group = classify(clone_elem).group;
-        }*/
+        for(var j=0; j<group.length; j++){
+            var clone_elem = _.clone(group[j], true).group;
+
+            //Classify if the group's STD is different than the current one
+            //otherwise the recursion will be infinite
+            var group_stdVal = std(getLineDistanceArr(clone_elem));
+            if(stdVal!=group_stdVal){
+                console.log("-------------------------------------------------");
+                group[j].group = classify(clone_elem);
+            }
+        }
 
         return group;
     }
