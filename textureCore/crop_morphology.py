@@ -185,7 +185,7 @@ def find_optimal_components_subset(contours, edges, out_path):
                         i, covered_sum, new_sum, total, remaining_frac,
                         crop_area(crop), crop_area(new_crop), area, new_area_frac,
                         f1, new_f1)"""
-                print '%s -> %s / %s (%s)' % (crop_area(crop), crop_area(new_crop), area, new_area_frac)
+                #print '%s -> %s / %s (%s)' % (crop_area(crop), crop_area(new_crop), area, new_area_frac)
                                 
                 crop = new_crop
                 covered_sum = new_sum
@@ -228,7 +228,7 @@ def pad_crop(crop, contours, edges, border_contour, pad_px=15):
         int_area = crop_area(intersect_crops(crop, this_crop))
         new_crop = crop_in_border(union_crops(crop, this_crop))
         if 0 < int_area < this_area and crop != new_crop:
-            print '%s -> %s' % (str(crop), str(new_crop))
+            #print '%s -> %s' % (str(crop), str(new_crop))
             changed = True
             crop = new_crop
 
@@ -270,7 +270,7 @@ def process_image(path, out_path):
     orig_im = Image.open(path)
     scale, im = downscale_image(orig_im)
 
-    print "done downscaling"
+    #print "done downscaling"
 
     edges = cv2.Canny(np.asarray(im), 100, 200)
 
@@ -279,7 +279,7 @@ def process_image(path, out_path):
     borders = find_border_components(contours, edges)
     borders.sort(key=lambda (i, x1, y1, x2, y2): (x2 - x1) * (y2 - y1))
 
-    print "done finding borders"
+    #print "done finding borders"
 
     border_contour = None
     if len(borders):
@@ -294,23 +294,23 @@ def process_image(path, out_path):
     debordered = np.minimum(np.minimum(edges, maxed_rows), maxed_cols)
     edges = debordered
 
-    print "applying rank filter"
+    #print "applying rank filter"
 
     #Find the contours of lines 
     standard_height_line = 10
     max_num_lines = im.size[1]/standard_height_line
     contours = find_components(edges, max_num_lines)
     if len(contours) == 0:
-        print '%s -> (no text!)' % path
+        #print '%s -> (no text!)' % path
         return
 
-    print "done finding comoponents"
+    #print "done finding comoponents"
 
     #This is up to the point where we need to process the contours on our own
     #Grab the contours and crop them into their own individual images
     c_info = props_for_contours(contours, edges)
     c_info.sort(key=lambda x: x['y1'])
-    print 'Number of boxes:%d' %(len(c_info))
+    #print 'Number of boxes:%d' %(len(c_info))
     
 
     #Crop the lines and add it to our ditionary of lines
@@ -318,7 +318,7 @@ def process_image(path, out_path):
     #draw = ImageDraw.Draw(im)
     for i, ct in enumerate(c_info):
         this_crop = ct['x1'], ct['y1'], ct['x2'], ct['y2']
-        print this_crop
+        #print this_crop
 
         #Check the crop's validity 
         if is_valid_crop(this_crop, im.size):
@@ -340,18 +340,14 @@ def process_image(path, out_path):
                                 'x1':ct['x1'],        # The original bounding box coordinates are kept for classifcation purposes
                                 'y1':ct['y1'],
                                 'x2':ct['x2'],
-                                'y2':ct['y2']
+                                'y2':ct['y2'],
+                                'line_height': ct['y2']-ct['y1']
                                 })
+
 
     #im.show()
 
-    #print page_lines
-
-
-
-    #TODO
-    #Organize the filenames by line numbers and sections based on the spacings in between the lines
-
+    print json.dumps({'data':page_lines})
 
     #Uncomment for original functionality (from danvk) 
     """crop = find_optimal_components_subset(contours, edges, out_path)
@@ -387,10 +383,12 @@ if __name__ == '__main__':
 
     for path in files:
         out_path = path.replace('.png', '.crop.png')
-        print out_path
+        #print out_path
         if os.path.exists(out_path): continue
         try:
-            print("Process images")
+            #print("Process images")
             process_image(path, out_path)
         except Exception as e:
-            print '%s %s' % (path, e)
+            #print '%s %s' % (path, e)
+            print ''
+
