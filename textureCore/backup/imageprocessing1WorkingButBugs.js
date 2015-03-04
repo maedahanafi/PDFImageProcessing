@@ -112,12 +112,12 @@ function classify(arr){
         var curr_max_diff = _.max(getLineDistanceArr(arr)); 
 
         // Initial prev group mode e.g. greater_than_std between line 0 and line 1
-        //var prev_group_mode = getLineMode(arr[0], arr[1], stdVal, curr_max_diff);
+        var prev_group_mode = getLineMode(arr[0], arr[1], stdVal, curr_max_diff);
         // Add this group to group[] 
         // e.g. [{group:[
         //          line 0, etc
         //      ]}]
-        group.push({ 'group': [ arr[0] ] });
+        group.push({'type':prev_group_mode, 'group': [ arr[0] ] });
 
         //Debugging purposes
         arr[0].diff = arr[1].y1 - arr[0].y2;
@@ -147,34 +147,31 @@ function classify(arr){
                 curr_group_index++. 
             */
 
-            if(_.isEqual('same_group', curr_group_mode) ){
+            if(_.isEqual(prev_group_mode, curr_group_mode) ){
                 //Adding a line to the current group
                 group[curr_group_index].group.push(arr[i]);
 
             }else{
-                //Adding a line to the current group
-                group[curr_group_index].group.push(arr[i]);
-
                 //Creating a new group
-                group.push({ 'group':[ ] });
-                curr_group_index++;
+                group.push({'type':curr_group_mode, 'group': [ ] });
+
                 /* We add current elem to a group.
                    Which group does current element belong to??
                    It's previous one if prev group mode is smaller than std
                    It's the one after that if curr group mode is greater than std
                    which indicates a break.
                  */
-                /*if(! _.isEqual(prev_group_mode, 'smaller_equal_to_std')){
+                if(! _.isEqual(prev_group_mode, 'smaller_equal_to_std')){
                     //This only happens when the the prev group mode isn;t smaller _equal_to_std
                     //Update our current group pointer, in order to add to the next group
                     curr_group_index++;
-                }*/
+                }
                 //Add to current group
-                //group[curr_group_index].group.push(arr[i]);
+                group[curr_group_index].group.push(arr[i]);
 
                 //Setting the prev_group_mode to the current one, which would be
                 //valid for the next iteration
-                //prev_group_mode = curr_group_mode;
+                prev_group_mode = curr_group_mode;
                 
             } 
 
@@ -187,7 +184,7 @@ function classify(arr){
         group[curr_group_index].group.push(arr[i]);
 
         //Once all the groups are created, for each group, classify.
-        for(var j=0; j<group.length; j++){
+        /*for(var j=0; j<group.length; j++){
             var clone_elem = _.clone(group[j], true).group;
 
             //Classify if the group's STD is different than the current one
@@ -197,7 +194,7 @@ function classify(arr){
                 console.log("-------------------------------------------------");
                 group[j].group = classify(clone_elem);
             }
-        }
+        }*/
 
         return group;
     }
@@ -230,11 +227,11 @@ function getLineMode(curr_elem, next_elem, std, max_diff){
         return 'less_than_zero';
     }else*/ 
     if(diff>max_diff){
-        return 'line_break';//'greater_than_max_diff';
+        return 'greater_than_max_diff';
     }else if(diff>std){
-        return  'line_break'; //'greater_than_std';
+        return 'greater_than_std';
     }else if(diff<=std){
-        return  'same_group';//'smaller_equal_to_std';
+        return 'smaller_equal_to_std';
     }
 }
 //OCR
