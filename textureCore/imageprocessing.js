@@ -23,8 +23,7 @@
 // 1. Cut the image up by lines and vertical white spaces. Use bounding boxes to figure out where the text is
 // 2. For each individual section, which would consist a line of words,
 //    label and group them.
-// We should get a datastructure containing information for each line and which group it belongs to
-// e.g. [{'content of line 1', 'section', '1'}]
+// We should get a nested datastructure of which group lines belong to
 
 var imagemagick = require('./imageutils.js');
 var jsesc = require('jsesc');
@@ -110,48 +109,53 @@ function classify(arr){
         var prev_group_mode = getLineMode(arr[0], arr[1], stdVal, curr_max_diff);
         // Add this group to group[] 
         // e.g. [{group:[
-        //          line 0, line 1
+        //          line 0, etc
         //      ]}]
-        group.push({'type':prev_group_mode, 'group': [ arr[0], arr[1] ] });
+        group.push({'type':prev_group_mode, 'group': [ arr[0] ] });
 
         //Debugging purposes
-        arr[1].diff = arr[1].y1 - arr[0].y2;
-        arr[1].stdVal = stdVal;
-        arr[1].curr_max_diff = curr_max_diff;
+        arr[0].diff = arr[1].y1 - arr[0].y2;
+        arr[0].stdVal = stdVal;
+        arr[0].curr_max_diff = curr_max_diff;
 
         //Pointer to which group we are adding to e.g. the 0th group in group[]
         var curr_group_index = 0;
 
         //Create groups based on modes
         var i=1;
-        while(i+1<arr.length){
+        while(i<arr.length-1){
             //Current group mode e.g. greater_than_std, etc
             var curr_group_mode = getLineMode(arr[i], arr[i+1], stdVal, curr_max_diff);
             
             //Debugging purposes
-            arr[i+1].diff = arr[i+1].y1 - arr[i].y2;
-            arr[i+1].stdVal = stdVal;
-            arr[i+1].curr_max_diff = curr_max_diff;
+            arr[i].diff = arr[i+1].y1 - arr[i].y2;
+            arr[i].stdVal = stdVal;
+            arr[i].curr_max_diff = curr_max_diff;
             
             /*  The following logic explained:
                 IF curr and prev are of the same group, 
-                then add arr[i+1] to the curr_group_index.
+                then add arr[i] to the curr_group_index.
                 ELSE then it is a new group we create. 
+                but first we add arr[i] to the curr_group_index.
+                then we create the new group   
                 set prev_group_mode into the current one
                 curr_group_index++. 
-                add arr[i+1] to the curr_group_index.   
             */
 
             if(_.isEqual(prev_group_mode, curr_group_mode)){
                 //Adding a line to the current group
-                group[curr_group_index].group.push(arr[i+1]);
+                group[curr_group_index].group.push(arr[i]);
             }else{
+                //First we add current elem to the current group before creating 
+                //a new group
+                group[curr_group_index].group.push(arr[i]);
+
                 //Setting the prev_group_mode to the current one, which would be
                 //valid for the next iteration
                 prev_group_mode = curr_group_mode;
 
-                //Creating a new group and adding in a new element
-                group.push({'type':curr_group_mode, 'group': [ arr[i+1] ] });
+                //Creating a new group
+                group.push({'type':curr_group_mode, 'group': [ ] });
 
                 //And updating out current group pointer
                 curr_group_index++;
@@ -159,6 +163,10 @@ function classify(arr){
             
             i++;
         }
+
+        //Once this loop this over, arr is left with the last element 
+        //It's grouping is the same as the previous one
+        group[curr_group_index].group.push(arr[i]);
 
         //Once all the groups are created, for each group, classify.
         /*for(var j=0; j<group.length; j++){
@@ -186,7 +194,6 @@ function classify(arr){
 */
 function getLineMode(curr_elem, next_elem, std, max_diff){
     var diff = next_elem.y1 - curr_elem.y2;
-
 
     /*
       Lines distances that are negative are in the same group as 'smaller_equal_to_std'. 
