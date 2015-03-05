@@ -30,6 +30,9 @@ var jsesc = require('jsesc');
 var _ = require('lodash');
 var util = require('util');
 
+//IMP, before calling iterate(), remember to init gatheredLeaves[]
+var gatheredLeaves = [];
+
 var input_file = 'img/taylorscrugstest.png';
 var trans_file = 'img/taylorscrugstestBW.png';
 imagemagick.transparency2white(input_file, trans_file);
@@ -47,32 +50,15 @@ child.stdout.on('data', function(data){
         return parseInt(n.line_number);
     });
 
-    console.log(data_sort);
+    //console.log(data_sort);
     
     var data_classify = classify(data_sort);
     console.log(JSON.stringify(data_classify));
+
+    gatheredLeaves = [];
+    iterate(data_classify)
+    console.log(JSON.stringify(gatheredLeaves));
     
-    //Organize the filenames by line numbers and sections based on the spacings 
-    //in between the lines
-
-    //Calculate the std on the diffs
-    //collect all the diffs first
-    /*var diffs = [];
-    var line_heights = [];
-    for(var i=0; i<data_sort.length-1; i++){
-        var curr_line_y = data_sort[i].y2;
-        var next_line_y = data_sort[i+1].y1;
-        var diff = next_line_y-curr_line_y;
-        diffs.push(diff);
-
-        line_heights.push(data_sort[i].y2 - data_sort[i].y1);
-
-        console.log(diff+" "+data_sort[i].line_number+" and "+data_sort[i+1].line_number);
-    }
-
-
-   console.log("aver line height: "+mean(line_heights)+", std: "+std(diffs));
-   */
 });
 
 child.stderr.on('data', function(data){
@@ -84,14 +70,56 @@ child.on('close', function(code){
 });
 
 
+//Gather all the leaf nodes
+function iterate(data_classify){
+    //Iterate through each element
+    //An element can be a nested or leaf
+    //A leaf is : {group:[{line:1}, {line:2}]}
+    //A nested is :{group:[{group:[]}]}
+    //If nested, call iterate
+    //If leaf, add to gather[]
+
+    var i=0;
+    while(i<data_classify.length){
+        var element = data_classify[i];
+        if(isLeaf(element)){
+            //console.log("A leaf:")
+            //console.log(JSON.stringify(element));
+
+            gatheredLeaves.push(element);
+        }else{
+            //console.log("A nest:")
+            //console.log(JSON.stringify(element));
+            iterate(element.group);
+        }
+
+        i++;
+    }
+}
+
+//A leaf is : {group:[{line:1}, {line:2}]}
+//A nested is :{group:[{group:[]}]}    
+function isLeaf(inElem){
+    //If there exists an element in inElem that contains the property 'group',
+    //then, inElem is nested
+    for(var t=0; t<inElem.group.length; t++){
+        var anElem = inElem.group[t];
+        if('group' in anElem){
+            return false;
+        }
+    }
+    return true;
+}
+
 //Classify the lines of the arr based on std
 function classify(arr){
     var mean_line_height = mean(_.pluck(arr, 'line_height'));
     //std is the STD of the array of distances between lines
     var stdVal = std(getLineDistanceArr(arr));
 
-    console.log("aver line height: "+mean_line_height+", std: "+stdVal);
-    console.log(arr);
+    //console.log("aver line height: "+mean_line_height+", std: "+stdVal);
+    //console.log(arr);
+    
     /* If the std is smaller than the average mean of line heights, 
        then return the same arr (no need to classify again because the line heights
        are smaller than the distances between the lines)
@@ -100,7 +128,6 @@ function classify(arr){
      */
     if(stdVal<mean_line_height/2 
         || arr.length<=2
-        //|| ( ( arr[0].stdVal) && arr[0].stdVal != stdVal)
     ){
         return arr;
     }else{
@@ -111,9 +138,7 @@ function classify(arr){
         // which is the current group )
         var curr_max_diff = _.max(getLineDistanceArr(arr)); 
 
-        // Initial prev group mode e.g. greater_than_std between line 0 and line 1
-        //var prev_group_mode = getLineMode(arr[0], arr[1], stdVal, curr_max_diff);
-        // Add this group to group[] 
+        // Add an initial group to group[] 
         // e.g. [{group:[
         //          line 0, etc
         //      ]}]
@@ -130,7 +155,7 @@ function classify(arr){
         //Create groups based on modes
         var i=1;    //The var that points to which element we want to group
         while(i<arr.length-1){
-            //Current group mode e.g. greater_than_std, etc
+            //Current group mode e.g. same_group, etc
             var curr_group_mode = getLineMode(arr[i], arr[i+1], stdVal, curr_max_diff);
             
             //Debugging purposes
@@ -139,11 +164,10 @@ function classify(arr){
             arr[i].curr_max_diff = curr_max_diff;
             
             /*  The following logic explained:
-                IF curr and prev are of the same group, 
+                IF curr is of the same group, 
                 then add arr[i] to the curr_group_index.
                 ELSE then it is a new group we create. 
                 then we create the new group   
-                set prev_group_mode into the current one
                 curr_group_index++. 
             */
 
@@ -157,25 +181,7 @@ function classify(arr){
 
                 //Creating a new group
                 group.push({ 'group':[ ] });
-                curr_group_index++;
-                /* We add current elem to a group.
-                   Which group does current element belong to??
-                   It's previous one if prev group mode is smaller than std
-                   It's the one after that if curr group mode is greater than std
-                   which indicates a break.
-                 */
-                /*if(! _.isEqual(prev_group_mode, 'smaller_equal_to_std')){
-                    //This only happens when the the prev group mode isn;t smaller _equal_to_std
-                    //Update our current group pointer, in order to add to the next group
-                    curr_group_index++;
-                }*/
-                //Add to current group
-                //group[curr_group_index].group.push(arr[i]);
-
-                //Setting the prev_group_mode to the current one, which would be
-                //valid for the next iteration
-                //prev_group_mode = curr_group_mode;
-                
+                curr_group_index++;                
             } 
 
             i++;
@@ -186,17 +192,23 @@ function classify(arr){
         //It's grouping is the same as the previous one
         group[curr_group_index].group.push(arr[i]);
 
+        //Not so nested grouping
+        //var groupArr =[];
+
         //Once all the groups are created, for each group, classify.
         for(var j=0; j<group.length; j++){
             var clone_elem = _.clone(group[j], true).group;
 
-            //Classify if the group's STD is different than the current one
+            //Call classify only if the group's STD is different than the current one
             //otherwise the recursion will be infinite
             var group_stdVal = std(getLineDistanceArr(clone_elem));
             if(stdVal!=group_stdVal){
-                console.log("-------------------------------------------------");
+                //console.log("-------------------------------------------------");
                 group[j].group = classify(clone_elem);
             }
+
+            //console.log('**************************************************************')
+            //console.log(JSON.stringify(groupArr));
         }
 
         return group;
@@ -214,21 +226,14 @@ function classify(arr){
   calculate the difference between the two line information
   and then based on the comparison between array and difference,
   get the mode of the array.
-  These are the modes: less_than_zero, greater_than_std, smaller_equal_to_std, greater_than_max_diff
+  The modes are: line_break or same_group. 
+  If the distance is greater than the STD, then there is a wide gap between the two lines.
+  Otherwise, they lie in the same group.
   We assume max_diff to be the maximum difference in within a group.
 */
 function getLineMode(curr_elem, next_elem, std, max_diff){
     var diff = next_elem.y1 - curr_elem.y2;
 
-    /*
-      Lines distances that are negative are in the same group as 'smaller_equal_to_std'. 
-      Putting it in a new group goes against the idea of grouping lines of same area 
-      together. the Purpose of assignin modes is to differentiate their distances, not 
-      group by difference values.
-
-    if(diff<0){   
-        return 'less_than_zero';
-    }else*/ 
     if(diff>max_diff){
         return 'line_break';//'greater_than_max_diff';
     }else if(diff>std){
@@ -237,9 +242,6 @@ function getLineMode(curr_elem, next_elem, std, max_diff){
         return  'same_group';//'smaller_equal_to_std';
     }
 }
-//OCR
-//image to text
-//0.037907603196799755.pdf-2.png
 
 //Given an array return the std
 //Calculation of STD
