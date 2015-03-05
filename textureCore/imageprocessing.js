@@ -29,46 +29,55 @@ var imagemagick = require('./imageutils.js');
 var jsesc = require('jsesc');
 var _ = require('lodash');
 var util = require('util');
+var miscutils = require('./miscutils');
 
 //IMP, before calling iterate(), remember to init gatheredLeaves[]
 var gatheredLeaves = [];
 
-var input_file = 'img/taylorscrugstest.png';
-var trans_file = 'img/taylorscrugstestBW.png';
-imagemagick.transparency2white(input_file, trans_file);
+var filename = 'img/taylorscrugstest'
+var image_ext = 'png'
+readPage(filename, image_ext);
+/*
+    @filename is the path and filename minus extention e.g. 'img/taylorscrugstest'
+    @image_ext is the image_ext
+ */
+function readPage(filename, image_ext){
+    var input_file = filename+'.'+image_ext; //'img/taylorscrugstest.png';
+    var trans_file = filename+'BW.'+image_ext;//'img/taylorscrugstestBW.png';
+    imagemagick.transparency2white(input_file, trans_file);
 
-//Invoke a child process that calls crop_morphology
-var exec = require('child_process').exec;  
-var cmd = 'python crop_morphology.py '+trans_file;  
-var child = exec(cmd);
+    //Invoke a child process that calls crop_morphology
+    var exec = require('child_process').exec;  
+    var cmd = 'python crop_morphology.py '+trans_file;  
+    var child = exec(cmd);
 
-child.stdout.on('data', function(data){
+    child.stdout.on('data', function(data){
 
-    var data_sort = JSON.parse(data).data;
-    //Sort the array by 'line_number'
-    data_sort = _.sortBy(data_sort, function(n) {
-        return parseInt(n.line_number);
+        var data_sort = JSON.parse(data).data;
+        //Sort the array by 'line_number'
+        data_sort = _.sortBy(data_sort, function(n) {
+            return parseInt(n.line_number);
+        });
+
+        miscutils.logMessage(data_sort, 1);
+        
+        var data_classify = classify(data_sort);
+        miscutils.logMessage(JSON.stringify(data_classify), 1);
+
+        gatheredLeaves = [];
+        iterate(data_classify)
+        miscutils.logMessage(JSON.stringify(gatheredLeaves), 1);
+        
     });
 
-    //console.log(data_sort);
-    
-    var data_classify = classify(data_sort);
-    console.log(JSON.stringify(data_classify));
+    child.stderr.on('data', function(data){
+        miscutils.logMessage('stderr:'+data);
+    });
 
-    gatheredLeaves = [];
-    iterate(data_classify)
-    console.log(JSON.stringify(gatheredLeaves));
-    
-});
-
-child.stderr.on('data', function(data){
-    console.log('stderr:'+data);
-});
-
-child.on('close', function(code){
-    console.log('closing code:'+code);
-});
-
+    child.on('close', function(code){
+        miscutils.logMessage('closing code:'+code);
+    });
+}
 
 //Gather all the leaf nodes
 function iterate(data_classify){
@@ -83,13 +92,13 @@ function iterate(data_classify){
     while(i<data_classify.length){
         var element = data_classify[i];
         if(isLeaf(element)){
-            //console.log("A leaf:")
-            //console.log(JSON.stringify(element));
+            miscutils.logMessage("A leaf:", 2)
+            miscutils.logMessage(JSON.stringify(element), 2);
 
             gatheredLeaves.push(element);
         }else{
-            //console.log("A nest:")
-            //console.log(JSON.stringify(element));
+            miscutils.logMessage("A nest:", 2)
+            miscutils.logMessage(JSON.stringify(element),2);
             iterate(element.group);
         }
 
@@ -117,8 +126,8 @@ function classify(arr){
     //std is the STD of the array of distances between lines
     var stdVal = std(getLineDistanceArr(arr));
 
-    //console.log("aver line height: "+mean_line_height+", std: "+stdVal);
-    //console.log(arr);
+    miscutils.logMessage("aver line height: "+mean_line_height+", std: "+stdVal, 2);
+    miscutils.logMessage(arr, 2);
     
     /* If the std is smaller than the average mean of line heights, 
        then return the same arr (no need to classify again because the line heights
@@ -144,7 +153,7 @@ function classify(arr){
         //      ]}]
         group.push({ 'group': [ arr[0] ] });
 
-        //Debugging purposes
+        //Debugging purposes and to keep track of the current iteration of stdVal for future comparisons
         arr[0].diff = arr[1].y1 - arr[0].y2;
         arr[0].stdVal = stdVal;
         arr[0].curr_max_diff = curr_max_diff;
@@ -191,10 +200,7 @@ function classify(arr){
         //Once this loop this over, arr is left with the last element 
         //It's grouping is the same as the previous one
         group[curr_group_index].group.push(arr[i]);
-
-        //Not so nested grouping
-        //var groupArr =[];
-
+    
         //Once all the groups are created, for each group, classify.
         for(var j=0; j<group.length; j++){
             var clone_elem = _.clone(group[j], true).group;
@@ -203,12 +209,9 @@ function classify(arr){
             //otherwise the recursion will be infinite
             var group_stdVal = std(getLineDistanceArr(clone_elem));
             if(stdVal!=group_stdVal){
-                //console.log("-------------------------------------------------");
+                miscutils.logMessage("-------------------------------------------------", 2);
                 group[j].group = classify(clone_elem);
             }
-
-            //console.log('**************************************************************')
-            //console.log(JSON.stringify(groupArr));
         }
 
         return group;
@@ -264,7 +267,6 @@ function std(arr){
     var variance = sumdiffmean/diffmean.length;
     var std = Math.sqrt(variance);
     return std;
-    //console.log("std: "+std + " variance:"+variance);
 }
 //
 function mean(arr){
