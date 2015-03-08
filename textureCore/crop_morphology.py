@@ -28,7 +28,8 @@ import json
 from collections import defaultdict
 
 import cv2
-from PIL import Image, ImageDraw
+import PIL
+from PIL import Image, ImageDraw, ImageFilter
 import numpy as np
 from scipy.ndimage.filters import rank_filter
 
@@ -47,6 +48,9 @@ def dilate(ary, N, iterations):
     kernel = np.zeros((N,N), dtype=np.uint8)
     kernel[(N-1)/2,:] = 1
     dilated_image = cv2.dilate(ary / 255, kernel, iterations=iterations)
+
+    #dilated_image = cv2.dilate(ary / 255, cv2.getStructuringElement(cv2.MORPH_CROSS,(N, N-1)), iterations=iterations)
+    
     
     return dilated_image
 
@@ -266,6 +270,21 @@ def is_valid_crop(crop, im_size):
     return True
 
 
+#Crop more vertically, in order to account for missing parts of the letters e.g. y, where the bottom part may be cut of
+def vertical_additions(crop, im_size):
+    x1, y1, x2, y2 = crop
+    width, height = im_size
+
+    newval = y1 - 3
+    if newval>=0:
+        y1 = newval
+
+    newval = y2 + 3
+    if newval<=height:    
+        y2 = newval
+
+    return x1, y1, x2, y2 
+
 def process_image(path, out_path):
     orig_im = Image.open(path)
     scale, im = downscale_image(orig_im)
@@ -322,6 +341,9 @@ def process_image(path, out_path):
 
         #Check the crop's validity 
         if is_valid_crop(this_crop, im.size):
+            #Crop more vertically, in order to account for missing parts of the letters e.g. y, where the bottom part may be cut of
+            this_crop = vertical_additions(this_crop, im.size)
+        
             #draw.rectangle(this_crop, outline='blue')
 
             #Set the crop
@@ -332,18 +354,28 @@ def process_image(path, out_path):
             this_crop_img.save(this_out_path)
             #this_crop_img.show()
 
-            line_type = ""
+            #Important! This resizing will help with OCR or else it won't recognize a thing
+            baseheight = 10*(ct['y2']-ct['y1']) #new height size
+            this_img = Image.open(this_out_path)
+            hpercent = (baseheight / float(this_img.size[1]))
+            wsize = int((float(this_img.size[0]) * float(hpercent))) #autocalculate the width size
+            this_img = this_img.resize((wsize, baseheight), PIL.Image.EXTENT)
+
+            this_img = this_img.filter(ImageFilter.SMOOTH) 
+            this_img = this_img.filter(ImageFilter.SHARPEN) #Sharpen the text
+
+            this_img.save(this_out_path)
+
             #Add the crop to page_lines
             page_lines.append({'line_number':i, 
                                 'filename':this_out_path, 
-                                'line_type':line_type, #We figure out the classfication later on
+                                #'line_type':line_type, #We figure out the classfication later on
                                 'x1':ct['x1'],        # The original bounding box coordinates are kept for classifcation purposes
                                 'y1':ct['y1'],
                                 'x2':ct['x2'],
                                 'y2':ct['y2'],
                                 'line_height': ct['y2']-ct['y1']
                                 })
-
 
     #im.show()
 
