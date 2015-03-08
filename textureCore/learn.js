@@ -13,6 +13,11 @@
 
  */
 
+var data = require('./image2data').image2data('img/', 'taylorscrugstest', 'png');
+function beginLearn(){
+	//Obtain results from imagingprocessing.js
+}
+
  function learnLookup(highlights){
  	//Lookup for words with NER, wordnet, and dictionary in highlights
  	//Highlights should have associated entity types and synonyms (Graph combo here)
