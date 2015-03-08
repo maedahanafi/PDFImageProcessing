@@ -50,81 +50,41 @@ readPage(filename, image_ext, function(result){
         var arr_read_promises = []; //Array of promises for reading the results of ocr
 
         //OCR each line.
-        //And add it as a property in each line
         result.forEach(function(groupElem){
             //Loop through each line in a group
             groupElem.group.forEach(function(lineElem){
-
-                var out_file = ocr_ext+justname+ctr;
-                lineElem.textFile = out_file+'.txt';
+                //And add the output file as a property in each line and add as a promise
+                var out_file = ocr_ext+justname+ctr+'.txt';
+                lineElem.textFile = out_file;
                 arr_promises.push(ocr.OCR(lineElem.filename, out_file));
-                //arr_read_promises.push(fs_readFile (out_file, "utf8"));
-
-                //ocr.OCR(lineElem.filename, out_file).then(function(){
-                //    console.log(out_file)
-                    //Open the txt file and then store the result into the line's properties
-                    /*fs_readFile(out_file, "utf8").then(function(data){
-                        console.log(data);
-                        //Assign the text to lineElem.text
-                        lineElem.text = data;
-                        //Output and log
-                        miscutils.logMessage('Done OCR:\"'+data+'\" to '+out_file, 1);
-                    }, console.error)*/
-
-                //});
-                /*ocr.OCR(lineElem.filename, out_file, function(){
-
-                    //Open the txt file and then store the result into the line's properties
-                    var fs = require('fs');
-                    fs.readFile(out_file, "utf8", function (error, data) {
-                        //Assign the text to lineElem.text
-                        lineElem.text = data;
-                        //Output and log
-                        miscutils.logMessage('Done OCR:\"'+data+'\" to '+out_file, 1);
-
-                    });
-
-                });*/
 
                 ctr++;
 
             });
            
         });
-        var allPromise = Q.all(arr_promises ).then(function(){
+
+        //After all the OCR is done on all files, reaad the result and add to our result data
+        var allPromise = Q.all(arr_promises ).then(function(ocrResults){
             
             //Assign the results of OCR to our datastructure, result
+            var index = 0;
             result.forEach(function(groupElem){
                 //Loop through each line in a group
                 groupElem.group.forEach(function(lineElem){
-                    fs_readFile(lineElem.textFile, "utf8").then(function(data){
-                        console.log(data);
-                        //Assign the text to lineElem.text
-                        lineElem.text = data;
-                        //Output and log
-                        //miscutils.logMessage('Done OCR:\"'+data+'\" to '+out_file, 1);
-                    }, console.error)
+                    //Assign the text to lineElem.text
+                    lineElem.text = ocrResults[index];
+                    index++;
                     
-                })
-            })
-            //var allPromise = Q.all(arr_read_promises ).then(function(data){
-                //Do a promise in the ocr, so that the code is synchronous and that
-                //we know when all the ocr's have been performed
-                //miscutils.logMessage('Results after the OCR:', 1)
-                //miscutils.logMessage(JSON.stringify(result), 1);
-                //console.log(data)
-            //});
+                });
+            });
 
             miscutils.logMessage('Results after the OCR:', 1)
             miscutils.logMessage(JSON.stringify(result), 1);
             
-            
 
         });
-
-
-        
-        
+ 
     }else{
         miscutils.logMessage('Error in Reading Page.', 1);
     }
