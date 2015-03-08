@@ -39,10 +39,16 @@ var gatheredLeaves = [];
 var filename = 'img/taylorscrugstest';
 var justname = 'taylorscrugstest';
 var image_ext = 'png';
-var ocr_ext = 'ocr/'
+var ocr_ext = 'ocr/';
+
 readPage(filename, image_ext, function(result){
     if(result!='err'){
         var ctr = 0;
+
+        var Q = require('Q');
+        var arr_promises = [];  //Array of promises for ocr
+        var arr_read_promises = []; //Array of promises for reading the results of ocr
+
         //OCR each line.
         //And add it as a property in each line
         result.forEach(function(groupElem){
@@ -50,8 +56,23 @@ readPage(filename, image_ext, function(result){
             groupElem.group.forEach(function(lineElem){
 
                 var out_file = ocr_ext+justname+ctr;
+                lineElem.textFile = out_file+'.txt';
+                arr_promises.push(ocr.OCR(lineElem.filename, out_file));
+                //arr_read_promises.push(fs_readFile (out_file, "utf8"));
 
-                ocr.OCR(lineElem.filename, out_file, function(){
+                //ocr.OCR(lineElem.filename, out_file).then(function(){
+                //    console.log(out_file)
+                    //Open the txt file and then store the result into the line's properties
+                    /*fs_readFile(out_file, "utf8").then(function(data){
+                        console.log(data);
+                        //Assign the text to lineElem.text
+                        lineElem.text = data;
+                        //Output and log
+                        miscutils.logMessage('Done OCR:\"'+data+'\" to '+out_file, 1);
+                    }, console.error)*/
+
+                //});
+                /*ocr.OCR(lineElem.filename, out_file, function(){
 
                     //Open the txt file and then store the result into the line's properties
                     var fs = require('fs');
@@ -63,20 +84,62 @@ readPage(filename, image_ext, function(result){
 
                     });
 
-                });
+                });*/
 
                 ctr++;
 
             });
-            //Do a promise in the ocr, so that the code is synchronous and that
-            //we know when all the ocr's have been performed
+           
+        });
+        var allPromise = Q.all(arr_promises ).then(function(){
+            
+            //Assign the results of OCR to our datastructure, result
+            result.forEach(function(groupElem){
+                //Loop through each line in a group
+                groupElem.group.forEach(function(lineElem){
+                    fs_readFile(lineElem.textFile, "utf8").then(function(data){
+                        console.log(data);
+                        //Assign the text to lineElem.text
+                        lineElem.text = data;
+                        //Output and log
+                        //miscutils.logMessage('Done OCR:\"'+data+'\" to '+out_file, 1);
+                    }, console.error)
+                    
+                })
+            })
+            //var allPromise = Q.all(arr_read_promises ).then(function(data){
+                //Do a promise in the ocr, so that the code is synchronous and that
+                //we know when all the ocr's have been performed
+                //miscutils.logMessage('Results after the OCR:', 1)
+                //miscutils.logMessage(JSON.stringify(result), 1);
+                //console.log(data)
+            //});
+
             miscutils.logMessage('Results after the OCR:', 1)
             miscutils.logMessage(JSON.stringify(result), 1);
+            
+            
+
         });
+
+
+        
+        
     }else{
         miscutils.logMessage('Error in Reading Page.', 1);
     }
 });
+
+function fs_readFile (file, encoding) {
+    var fs = require('fs');
+    var Q = require('Q');
+    var deferred = Q.defer()
+    fs.readFile(file, encoding, function (err, data) {
+        if (err) deferred.reject(err) // rejects the promise with `er` as the reason
+        else deferred.resolve(data) // fulfills the promise with `data` as the value
+    })
+    return deferred.promise // the promise is returned
+}
 
 
 /*

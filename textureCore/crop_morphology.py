@@ -374,7 +374,8 @@ def process_image(path, out_path):
                                 'y1':ct['y1'],
                                 'x2':ct['x2'],
                                 'y2':ct['y2'],
-                                'line_height': ct['y2']-ct['y1']
+                                'line_height': ct['y2']-ct['y1'],
+                                'text':''
                                 })
 
     #im.show()
