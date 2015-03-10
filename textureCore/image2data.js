@@ -31,6 +31,8 @@ var _ = require('lodash');
 var util = require('util');
 var miscutils = require('./miscutils');
 var ocr = require('./ocr');
+var hocr = require('./hocr');
+
 
 //IMP, before calling iterate(), remember to init gatheredLeaves[]
 var gatheredLeaves = [];
@@ -39,8 +41,8 @@ var gatheredLeaves = [];
 //var path = 'img/';
 //var justname = 'taylorscrugstest';
 //var image_ext = 'png';
-var ocr_ext = 'ocr/';
-
+var ocr_path = 'ocr/';
+var hocr_path = 'hocr/';
 
 /*
     @path is the path to the image file e.g. 'img/'
@@ -49,14 +51,15 @@ var ocr_ext = 'ocr/';
 
     Example call: image2data('img/', 'taylorscrugstest', 'png');
 */
-function image2data (path, onlyfilename, image_ext){
+function image2data (path, onlyfilename, image_ext, callback){
+    var Q = require('Q');
+
     var filename = path+onlyfilename; //e.g. 'img/taylorscrugstest';
 
-    readPage(filename, image_ext, function(result){
+    imageprocess_page(filename, image_ext, function(result){
         if(result!='err'){
             var ctr = 0;
 
-            var Q = require('Q');
             var arr_promises = [];  //Array of promises for ocr
             var arr_read_promises = []; //Array of promises for reading the results of ocr
 
@@ -65,8 +68,8 @@ function image2data (path, onlyfilename, image_ext){
                 //Loop through each line in a group
                 groupElem.group.forEach(function(lineElem){
                     //And add the output file as a property in each line and add as a promise
-                    var out_file = ocr_ext+onlyfilename+ctr+'.txt';
-                    lineElem.textFile = out_file;
+                    var out_file = ocr_path+onlyfilename+ctr;
+                    lineElem.textFile = out_file+'.txt';
                     arr_promises.push(ocr.OCR(lineElem.filename, out_file));
 
                     ctr++;
@@ -93,77 +96,138 @@ function image2data (path, onlyfilename, image_ext){
                 miscutils.logMessage('Results after the OCR:', 1)
                 miscutils.logMessage(JSON.stringify(result), 1);
                 
+                //And then call hocr in order to assign lines line types
+                assignType(result, path, onlyfilename, image_ext, hocr_path).then(function(datastructure){
+                    miscutils.logMessage('Done assigning types', 1);
+
+                    callback(datastructure);
+                });
 
             });
      
         }else{
             miscutils.logMessage('Error in Reading Page.', 1);
+            callback('err');
         }
     });
 }
 exports.image2data = image2data;
 
-function fs_readFile (file, encoding) {
-    var fs = require('fs');
+/*
+    @datastructure contains the grouped lines
+    @image_path is the image_path
+    @image_ext is the image_ext
+    @filename of the image
+    @hocr_path is the hocr result folder
+*/
+function assignType(datastructure, image_path, filename, image_ext, hocr_path){
     var Q = require('Q');
     var deferred = Q.defer()
-    fs.readFile(file, encoding, function (err, data) {
-        if (err) deferred.reject(err) // rejects the promise with `er` as the reason
-        else deferred.resolve(data) // fulfills the promise with `data` as the value
-    })
+
+    getFontInfo(datastructure, image_path, filename, image_ext, hocr_path, function(indatastructure){
+        deferred.resolve(datastructure);
+    });
+
     return deferred.promise // the promise is returned
 }
 
-
 /*
-    @filename is the path and filename minus extention e.g. 'img/taylorscrugstest'
-    @image_ext is the image_ext
-    @callback is the function to execute after all is done. readPage passes
-    gatheredLeaves[] e.g. [{'group':[line1,line2]}, {group:[line3,line4]}]
- */
-function readPage(filename, image_ext, callback){
-    var input_file = filename+'.'+image_ext; //'img/taylorscrugstest.png';
-    var trans_file = filename+'BW.'+image_ext;//'img/taylorscrugstestBW.png';
-    imagemagick.transparency2white(input_file, trans_file);
+See assignType() for parameter information
+Get font information. Given the image filename, hocr it in order to get font information. Then 
+read that hocr file and then assign the information into the datastructure
+@returns via callback the font information embedded in each line of the datastructure e.g.
+[{group:[ {line1+fontinfo}, {line2_fontinfo} ]}, {group...}...]
+*/
+function getFontInfo(datastructure, image_path, filename,image_ext, hocr_path, callback){
+    var out_file = hocr_path+filename+'.html';
+    hocr.HOCR(image_path+filename+'.'+image_ext, hocr_path+filename).then(function(){
+        //Read HOCR file:
+        miscutils.fs_readFile(out_file).then(function(hocr_result){
+            //Output and log
+            miscutils.logMessage('Done Reading HOCR to '+out_file+':\"'+hocr_result+'\" ', 2);
+            miscutils.logMessage('Begin parsing HOCR results', 1);
+            //Manipulate the DOM using cheerio (jquery-like manipulation)
+            var cheerio   = require('cheerio'),
+                    $     = cheerio.load(hocr);
 
-    //Invoke a child process that calls crop_morphology
-    var exec = require('child_process').exec;  
-    var cmd = 'python crop_morphology.py '+trans_file;  
-    var child = exec(cmd);
+            //Loop through each word and assign a font type to each word 
+            //e.g. {word:'Maeda', font:['Bold', italic]}
+            var font_per_word = [];
+            $('span').each(function () {
+                console.log(this.value); // "this" is the current element in the loop
+            });
+            //callback(datastructure);
 
-    child.stdout.on('data', function(data){
-
-        var data_sort = JSON.parse(data).data;
-        //Sort the array by 'line_number'
-        data_sort = _.sortBy(data_sort, function(n) {
-            return parseInt(n.line_number);
-        });
-
-        miscutils.logMessage('Page data Line by line:', 1);
-        miscutils.logMessage(data_sort, 1);
+        }, function(err){
+            miscutils.logMessage('Error in HOCR:'+err, 1);
+            callback('err');
+            
+        })
         
-        var data_classify = classify(data_sort);
-        miscutils.logMessage('Page data grouped:', 2);
-        miscutils.logMessage(JSON.stringify(data_classify), 2);
-
-        gatheredLeaves = [];
-        iterate(data_classify)
-        miscutils.logMessage('Page data grouped and unnested:', 1);
-        miscutils.logMessage(JSON.stringify(gatheredLeaves), 1);
-        
-        callback(gatheredLeaves);
-    });
-
-    child.stderr.on('data', function(data){
-        miscutils.logMessage('stderr:'+data, 1);
-        callback('err');
-    });
-
-    child.on('close', function(code){
-        miscutils.logMessage('closing code for exec python:'+code, 1);
     });
 }
-exports.readPage = readPage;
+
+
+
+
+/*
+    Converts all alphas into white and then dilates the image to extract text areas.
+    Then it groups them based on distances between each text areas.
+    @filename is the path and filename minus extention e.g. 'img/taylorscrugstest'
+    @image_ext is the image_ext
+    @callback is the function to execute after all is done. imageprocess_page passes
+     gatheredLeaves[] e.g. [{'group':[line1,line2]}, {group:[line3,line4]}]
+
+ */
+function imageprocess_page(filename, image_ext, callback){
+    //First turn all alphas into white
+    var input_file = filename+'.'+image_ext; //'img/taylorscrugstest.png';
+    var trans_file = filename+'BW.'+image_ext;//'img/taylorscrugstestBW.png';
+
+    imagemagick.transparency2white(input_file, trans_file, function(){
+
+        //Secondly, invoke a child process that calls crop_morphology
+        var exec = require('child_process').exec;  
+        var cmd = 'python crop_morphology.py '+trans_file;  
+        var child = exec(cmd);
+
+        child.stdout.on('data', function(data){
+
+            var data_sort = JSON.parse(data).data;
+            //Sort the array by 'line_number'
+            data_sort = _.sortBy(data_sort, function(n) {
+                return parseInt(n.line_number);
+            });
+
+            miscutils.logMessage('Page data Line by line:', 1);
+            miscutils.logMessage(data_sort, 1);
+            
+            //Thirdly, group the lines based on distances between them
+            var data_classify = classify(data_sort);
+            miscutils.logMessage('Page data grouped:', 2);
+            miscutils.logMessage(JSON.stringify(data_classify), 2);
+
+            gatheredLeaves = [];
+            iterate(data_classify)
+            miscutils.logMessage('Page data grouped and unnested:', 1);
+            miscutils.logMessage(JSON.stringify(gatheredLeaves), 1);
+            
+            //Finally return to the user
+            callback(gatheredLeaves);
+        });
+
+        child.stderr.on('data', function(data){
+            miscutils.logMessage('stderr:'+data, 1);
+            callback('err');
+        });
+
+        child.on('close', function(code){
+            miscutils.logMessage('closing code for exec python:'+code, 1);
+        });
+    });
+
+    
+}
 
 //Gather all the leaf nodes
 function iterate(data_classify){

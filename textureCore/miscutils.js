@@ -28,3 +28,15 @@ function logMessage(message, msgDebugLevel){
 
 }
 exports.logMessage = logMessage;
+
+function fs_readFile (file, encoding) {
+    var Q = require('Q'); 
+    var deferred = Q.defer();
+    var fs = require('fs');
+    fs.readFile(file, encoding, function (err, data) {
+        if (err) deferred.reject(err) // rejects the promise with `er` as the reason
+        else deferred.resolve(data) // fulfills the promise with `data` as the value
+    })
+    return deferred.promise // the promise is returned
+}
+exports.fs_readFile = fs_readFile;

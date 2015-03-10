@@ -3,7 +3,7 @@ Functions that call Tesseract for OCR
 */
 var miscutils = require('./miscutils');
 
-exports.OCR = function(image_file, output /* , callback*/){
+exports.OCR = function(image_file, output ){
       var Q = require('Q');
       var deferred = Q.defer();
 
@@ -14,7 +14,7 @@ exports.OCR = function(image_file, output /* , callback*/){
       var child = exec(cmd);
 
       child.on('close', function(code){
-          fs_readFile(output, "utf8").then(function(data){
+          miscutils.fs_readFile(output+'.txt', "utf8").then(function(data){
              
               deferred.resolve(data);
 
@@ -31,14 +31,5 @@ exports.OCR = function(image_file, output /* , callback*/){
       return deferred.promise;
 }
 
-function fs_readFile (file, encoding) {
-    var Q = require('Q'); 
-    var deferred = Q.defer();
-    var fs = require('fs');
-    fs.readFile(file, encoding, function (err, data) {
-        if (err) deferred.reject(err) // rejects the promise with `er` as the reason
-        else deferred.resolve(data) // fulfills the promise with `data` as the value
-    })
-    return deferred.promise // the promise is returned
-}
+
 

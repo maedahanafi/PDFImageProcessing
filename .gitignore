@@ -2,3 +2,5 @@ models/en-default.pyrnn
 models/en-default.pyrnn.gz
 models/en-default.pyrnn.gz.1
 node_modules
+img
+ocr
