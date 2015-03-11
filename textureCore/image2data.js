@@ -56,6 +56,7 @@ function image2data (path, onlyfilename, image_ext, callback){
 
     var filename = path+onlyfilename; //e.g. 'img/taylorscrugstest';
 
+    //Firstly process the image via image processing and then get a list of grouped lines
     imageprocess_page(filename, image_ext, function(result){
         if(result!='err'){
             var ctr = 0;
@@ -63,7 +64,7 @@ function image2data (path, onlyfilename, image_ext, callback){
             var arr_promises = [];  //Array of promises for ocr
             var arr_read_promises = []; //Array of promises for reading the results of ocr
 
-            //OCR each line.
+            //Secondly, perform OCR per line in our datastructure, result. 
             result.forEach(function(groupElem){
                 //Loop through each line in a group
                 groupElem.group.forEach(function(lineElem){
@@ -78,7 +79,8 @@ function image2data (path, onlyfilename, image_ext, callback){
                
             });
 
-            //After all the OCR is done on all files, reaad the result and add to our result data
+            //Thirdly, after all the OCR is done on all files, assign each OCR line result to 
+            //each line in our datastructure, result.
             var allPromise = Q.all(arr_promises ).then(function(ocrResults){
                 
                 //Assign the results of OCR to our datastructure, result
@@ -96,7 +98,7 @@ function image2data (path, onlyfilename, image_ext, callback){
                 miscutils.logMessage('Results after the OCR:', 1)
                 miscutils.logMessage(JSON.stringify(result), 1);
                 
-                //And then call hocr in order to assign lines line types
+                //Fourthly, call hocr in order to assign lines line types, which involves getting font types
                 assignType(result, path, onlyfilename, image_ext, hocr_path).then(function(datastructure){
                     miscutils.logMessage('Done assigning types', 1);
 
@@ -148,14 +150,86 @@ function getFontInfo(datastructure, image_path, filename,image_ext, hocr_path, c
             miscutils.logMessage('Begin parsing HOCR results', 1);
             //Manipulate the DOM using cheerio (jquery-like manipulation)
             var cheerio   = require('cheerio'),
-                    $     = cheerio.load(hocr);
+                    $     = cheerio.load(hocr_result);
 
             //Loop through each word and assign a font type to each word 
-            //e.g. {word:'Maeda', font:['Bold', italic]}
+            //e.g. {word:'Maeda', font:['Bold', italic, text-size]}
             var font_per_word = [];
-            $('span').each(function () {
-                console.log(this.value); // "this" is the current element in the loop
+            //Go through each word
+            $('.ocrx_word').each(function () {
+                //@i is the ith word in the whole page
+                var curr_word = $(this).text();
+                var curr_word_id = $(this).attr('id');
+                var i = curr_word_id.match(/[0-9]+/)[0];
+
+                var font_info = {'i': i,
+                                 'word': curr_word, 
+                                 'bold': 0, 
+                                 'italic': 0,
+                                 'height':0,
+                                 'width':0};
+
+                miscutils.logMessage(curr_word, 2); // "this" is the current element in the loop
+
+                //Bold is equal to strong
+                if( $(this).has('strong').length || $(this).has('B').length){
+                    miscutils.logMessage('Bold', 2);
+                    font_info.bold = 1;
+                }
+                //Italic?
+                if( $(this).has('I').length){
+                    miscutils.logMessage('Italic', 2);
+                    font_info.italic = 1;
+                }
+                //Size cannot be measured because that ultimately requires client side rendering 
+                //var size = $(this).height(); //which is impossible in cheerio
+                //The alternative would be to use the title attribute that contains information on b
+                //bounding boxes e.g.  "bbox 203 222 374 299". So, bboxinfo is [203, etc]
+                var title_attr = $(this).attr('title');
+                var bboxinfo = title_attr.match(/[0-9]+/g);
+                bboxinfo = _.map(bboxinfo, function(num_str){
+                    return parseInt(num_str); //Convert the string into int
+                });
+
+                font_info.height = bboxinfo[3] - bboxinfo[1];
+                font_info.width = bboxinfo[2] - bboxinfo[0];
+
+                miscutils.logMessage('Width: '+font_info.width+' Height: '+font_info.height, 2);
+                miscutils.logMessage('Size: '+JSON.stringify(bboxinfo), 2);
+
+                miscutils.logMessage('----------------------------------', 2);
+
+                font_per_word.push(font_info);
+
             });
+            
+            //Sort the words by numbers
+            font_per_word = _.sortBy(font_per_word, function(n) {
+                return n.i;
+            });
+           
+            miscutils.logMessage('Done gathering font info', 1);
+            miscutils.logMessage(JSON.stringify(font_per_word), 1);
+
+            /* Identify which font is generic, meaning that the font type is popular. Since a 
+               combination of italic, bold, or non-italic/non-bold would indicate which is the popular combination,
+               we gather stats on each one (except for plain). Also look into 
+               the stats of the heights.
+            */
+            var aver_heights = mean(_.pluck(font_per_word, 'height'));
+            console.log(aver_heights)
+            var italic_freq = sum(_.pluck(font_per_word, 'italic'));
+            console.log(italic_freq)
+            var bold_freq = sum(_.pluck(font_per_word, 'bold'));
+            console.log(bold_freq)
+
+
+
+
+            //Challenge is: which word belongs to which line
+            //Identify pages
+            //
+
             //callback(datastructure);
 
         }, function(err){
@@ -285,7 +359,7 @@ function classify(arr){
        or if the stdVal is the same as the previous round (which means there is no chance of change)
        or if the number of lines in arr is one
      */
-    if(stdVal<mean_line_height/2 
+    if(stdVal<mean_line_height
         || arr.length<=2
     ){
         return arr;
@@ -417,6 +491,12 @@ function std(arr){
     var variance = sumdiffmean/diffmean.length;
     var std = Math.sqrt(variance);
     return std;
+}
+
+function sum(arr){
+    return _.reduce(arr, function(sumt, n){
+        return sumt + n;
+    });
 }
 //
 function mean(arr){

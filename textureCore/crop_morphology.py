@@ -16,6 +16,10 @@ The image must have the alphas translated to white color (in some resume images 
 The input to this script is the image in PNG format
 The text areas are bounded per line and then each bound is save in it's own image
 The filenames are printed as well (important for communicating back to nodejs server).
+
+IMPORTANT: Before running activate the environment variables:
+ADUAE04448LP-MX:bbr mh4047$ source venv/bin/activate
+
 '''
 
 import glob

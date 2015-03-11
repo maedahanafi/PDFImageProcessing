@@ -1,4 +1,8 @@
 /*
+	
+	Before running activate the environment variables:
+	ADUAE04448LP-MX:bbr mh4047$ source venv/bin/activate
+
 	Script Learning
  
 
@@ -10,6 +14,9 @@
  5. Learn the in operator. Identify where to look fields in. 
  	Same group or child group? Before or after a field?
  4. Learn a permute function. 
+
+ We assume that dictionaries are loaded.
+
 
 
  */
