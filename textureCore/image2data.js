@@ -99,6 +99,7 @@ function image2data (path, onlyfilename, image_ext, callback){
                 miscutils.logMessage(JSON.stringify(result), 1);
                 
                 //Fourthly, call hocr in order to assign lines line types, which involves getting font types
+                //HOCR cannot be used for recognizing fonts on individual lines; HOCR must be applied on the whole page
                 assignType(result, path, onlyfilename, image_ext, hocr_path).then(function(datastructure){
                     miscutils.logMessage('Done assigning types', 1);
 
@@ -121,26 +122,112 @@ exports.image2data = image2data;
     @image_ext is the image_ext
     @filename of the image
     @hocr_path is the hocr result folder
+    @returns the font information embedded in each line of the datastructure e.g.
+    [{group:[ {line1+fontinfo}, {line2_fontinfo} ]}, {group...}...]
 */
 function assignType(datastructure, image_path, filename, image_ext, hocr_path){
     var Q = require('Q');
     var deferred = Q.defer()
 
-    getFontInfo(datastructure, image_path, filename, image_ext, hocr_path, function(indatastructure){
+    getFontInfo(image_path, filename, image_ext, hocr_path, function(font_info){ //font_info contains a list of words and font descriptions
+
+        /* Identify which font is generic, meaning that the font type is popular. Since a 
+           combination of italic, bold, or non-italic/non-bold would indicate which is the popular combination,
+           we gather stats on each one (except for plain). Also look into 
+           the stats of the heights.
+        */
+        var tot_words = font_info.length;
+        var aver_heights = mean(_.pluck(font_info, 'height'));
+        var italic_freq = sum(_.pluck(font_info, 'italic'));
+        var bold_freq = sum(_.pluck(font_info, 'bold'));
+
+
+        /*
+            In order to identify what generic text is, we gather statistics on the font descriptions, 
+            which HOCR limits us to only italic and bold. If italic is more popular than non-italic, 
+            then the text that is italic is considered generic. Similarly, the frequency of bolded words 
+            is compared to the frequency of non-bolded words. We also have to compare between combinations 
+            between bold and italic e.g. {!bold and italic} or {bold and !italic}. Which ever of the four combination 
+            appears the most within the text will be considered generic If a word, doesn’t satisfy the conditions 
+            of being generic, then it is considered a title of subtitle depending on it’s height. 
+
+        */
+        //This hold conditions for generic text
+        var generic_text_desc = getGenericType(italic_freq, bold_freq, tot_words);
+        console.log(generic_text_desc)
+        
+
+        /*  Challenge is: which word belongs to which line
+            For each lines within the data structure, collect words from font_info[] that are consecutive and 
+            match some words. Essentially we have to find non over lapping collection of words that match lines.
+
+        */
+        
+        var font_index = 0; //Pointer to the font_info[] that contains words and fonts
+
+        for(var i=0; i<datastructure.length; i++){ //datastructure.forEach(function(groupElem){
+            var groupElem = datastructure[i].group;
+            //Loop through each line in a group
+            groupElem.forEach(function(lineElem){
+                //For each line find a collection of words that 'match' the lines
+
+
+            });
+           
+        } //);
+
+        //Identify pages
+
         deferred.resolve(datastructure);
     });
 
     return deferred.promise // the promise is returned
 }
 
+
+/*
+    See documentation is assignTypes(). Which of the combinations of italic and bold is popular e.g.
+    {!italic, !bold}
+    {italic, bold}
+    {!italic, bold}
+    {italic, !bold}
+    
+    @returns generic type
+*/
+function getGenericType(italic_freq, bold_freq, tot_words){
+    /*
+        For each combination e.g. {!italic, !bold}, count the occurences e.g. !italic = tot-italic
+        Whichever combo is bigger e.g. italic + bold then return it.
+        In arr, the first index corresponds to the combo {!italic, !bold}, and so and so forth 
+        {italic, bold}
+        {!italic, bold}
+        {italic, !bold}
+        The contents in the array contain the italic+bold sum that will lead to which one is considered generic.
+    */
+    var arr =[];
+
+    //So for the first round we calculate {!italic, !bold}
+    arr[0] = {'sum':(tot_words-italic_freq)+ (tot_words-bold_freq), 'bold':0, 'italic':0};
+    arr[1] = {'sum':(italic_freq) + (bold_freq), 'bold':1, 'italic':1};
+    arr[2] = {'sum':(tot_words-italic_freq) + (bold_freq), 'bold':1, 'italic':0};
+    arr[3] = {'sum':(italic_freq) + (tot_words-bold_freq), 'bold':0, 'italic':1};
+
+    var max = arr[0];
+    for(var i=1; i<max.length; i++){
+        if(arr[i].sum>max.sum){
+            max = arr[i];
+        }
+    }
+    return max;
+}
+
 /*
 See assignType() for parameter information
 Get font information. Given the image filename, hocr it in order to get font information. Then 
 read that hocr file and then assign the information into the datastructure
-@returns via callback the font information embedded in each line of the datastructure e.g.
-[{group:[ {line1+fontinfo}, {line2_fontinfo} ]}, {group...}...]
+@returns an array of words with associated fonts e.g. [{word,font},{word,font},....]
 */
-function getFontInfo(datastructure, image_path, filename,image_ext, hocr_path, callback){
+function getFontInfo(image_path, filename,image_ext, hocr_path, callback){
     var out_file = hocr_path+filename+'.html';
     hocr.HOCR(image_path+filename+'.'+image_ext, hocr_path+filename).then(function(){
         //Read HOCR file:
@@ -211,26 +298,7 @@ function getFontInfo(datastructure, image_path, filename,image_ext, hocr_path, c
             miscutils.logMessage('Done gathering font info', 1);
             miscutils.logMessage(JSON.stringify(font_per_word), 1);
 
-            /* Identify which font is generic, meaning that the font type is popular. Since a 
-               combination of italic, bold, or non-italic/non-bold would indicate which is the popular combination,
-               we gather stats on each one (except for plain). Also look into 
-               the stats of the heights.
-            */
-            var aver_heights = mean(_.pluck(font_per_word, 'height'));
-            console.log(aver_heights)
-            var italic_freq = sum(_.pluck(font_per_word, 'italic'));
-            console.log(italic_freq)
-            var bold_freq = sum(_.pluck(font_per_word, 'bold'));
-            console.log(bold_freq)
-
-
-
-
-            //Challenge is: which word belongs to which line
-            //Identify pages
-            //
-
-            //callback(datastructure);
+            callback(font_per_word);
 
         }, function(err){
             miscutils.logMessage('Error in HOCR:'+err, 1);
