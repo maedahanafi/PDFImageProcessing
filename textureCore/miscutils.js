@@ -27,7 +27,7 @@ function logMessage(message, msgDebugLevel){
 	loggedMessages.push(/*jsStringEscape*/(message))
 
 }
-<<<<<<< HEAD
+
 exports.logMessage = logMessage;
 
 function fs_readFile (file, encoding) {
@@ -41,6 +41,3 @@ function fs_readFile (file, encoding) {
     return deferred.promise // the promise is returned
 }
 exports.fs_readFile = fs_readFile;
-=======
-exports.logMessage = logMessage;
->>>>>>> FETCH_HEAD

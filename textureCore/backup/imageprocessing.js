@@ -30,14 +30,13 @@ var jsesc = require('jsesc');
 var _ = require('lodash');
 var util = require('util');
 var miscutils = require('./miscutils');
-<<<<<<< HEAD:textureCore/backup/imageprocessing.js
 var ocr = require('./ocr');
-=======
->>>>>>> FETCH_HEAD:textureCore/imageprocessing.js
+
 
 //IMP, before calling iterate(), remember to init gatheredLeaves[]
 var gatheredLeaves = [];
 
+<<<<<<< HEAD:textureCore/backup/imageprocessing.js
 <<<<<<< HEAD:textureCore/backup/imageprocessing.js
 //BEGIN
 var filename = 'img/taylorscrugstest';
@@ -192,6 +191,44 @@ function readPage(filename, image_ext){
         
     });
 
+=======
+var filename = 'img/taylorscrugstest'
+var image_ext = 'png'
+readPage(filename, image_ext);
+/*
+    @filename is the path and filename minus extention e.g. 'img/taylorscrugstest'
+    @image_ext is the image_ext
+ */
+function readPage(filename, image_ext){
+    var input_file = filename+'.'+image_ext; //'img/taylorscrugstest.png';
+    var trans_file = filename+'BW.'+image_ext;//'img/taylorscrugstestBW.png';
+    imagemagick.transparency2white(input_file, trans_file);
+
+    //Invoke a child process that calls crop_morphology
+    var exec = require('child_process').exec;  
+    var cmd = 'python crop_morphology.py '+trans_file;  
+    var child = exec(cmd);
+
+    child.stdout.on('data', function(data){
+
+        var data_sort = JSON.parse(data).data;
+        //Sort the array by 'line_number'
+        data_sort = _.sortBy(data_sort, function(n) {
+            return parseInt(n.line_number);
+        });
+
+        miscutils.logMessage(data_sort, 1);
+        
+        var data_classify = classify(data_sort);
+        miscutils.logMessage(JSON.stringify(data_classify), 1);
+
+        gatheredLeaves = [];
+        iterate(data_classify)
+        miscutils.logMessage(JSON.stringify(gatheredLeaves), 1);
+        
+    });
+
+>>>>>>> FETCH_HEAD:textureCore/imageprocessing.js
     child.stderr.on('data', function(data){
         miscutils.logMessage('stderr:'+data);
     });
@@ -200,6 +237,9 @@ function readPage(filename, image_ext){
         miscutils.logMessage('closing code:'+code);
     });
 }
+<<<<<<< HEAD:textureCore/backup/imageprocessing.js
+>>>>>>> FETCH_HEAD:textureCore/imageprocessing.js
+=======
 >>>>>>> FETCH_HEAD:textureCore/imageprocessing.js
 
 //Gather all the leaf nodes
