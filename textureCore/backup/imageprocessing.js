@@ -30,11 +30,15 @@ var jsesc = require('jsesc');
 var _ = require('lodash');
 var util = require('util');
 var miscutils = require('./miscutils');
+<<<<<<< HEAD:textureCore/backup/imageprocessing.js
 var ocr = require('./ocr');
+=======
+>>>>>>> FETCH_HEAD:textureCore/imageprocessing.js
 
 //IMP, before calling iterate(), remember to init gatheredLeaves[]
 var gatheredLeaves = [];
 
+<<<<<<< HEAD:textureCore/backup/imageprocessing.js
 //BEGIN
 var filename = 'img/taylorscrugstest';
 var justname = 'taylorscrugstest';
@@ -151,6 +155,52 @@ function readPage(filename, image_ext, callback){
     });
 }
 exports.readPage = readPage;
+=======
+var filename = 'img/taylorscrugstest'
+var image_ext = 'png'
+readPage(filename, image_ext);
+/*
+    @filename is the path and filename minus extention e.g. 'img/taylorscrugstest'
+    @image_ext is the image_ext
+ */
+function readPage(filename, image_ext){
+    var input_file = filename+'.'+image_ext; //'img/taylorscrugstest.png';
+    var trans_file = filename+'BW.'+image_ext;//'img/taylorscrugstestBW.png';
+    imagemagick.transparency2white(input_file, trans_file);
+
+    //Invoke a child process that calls crop_morphology
+    var exec = require('child_process').exec;  
+    var cmd = 'python crop_morphology.py '+trans_file;  
+    var child = exec(cmd);
+
+    child.stdout.on('data', function(data){
+
+        var data_sort = JSON.parse(data).data;
+        //Sort the array by 'line_number'
+        data_sort = _.sortBy(data_sort, function(n) {
+            return parseInt(n.line_number);
+        });
+
+        miscutils.logMessage(data_sort, 1);
+        
+        var data_classify = classify(data_sort);
+        miscutils.logMessage(JSON.stringify(data_classify), 1);
+
+        gatheredLeaves = [];
+        iterate(data_classify)
+        miscutils.logMessage(JSON.stringify(gatheredLeaves), 1);
+        
+    });
+
+    child.stderr.on('data', function(data){
+        miscutils.logMessage('stderr:'+data);
+    });
+
+    child.on('close', function(code){
+        miscutils.logMessage('closing code:'+code);
+    });
+}
+>>>>>>> FETCH_HEAD:textureCore/imageprocessing.js
 
 //Gather all the leaf nodes
 function iterate(data_classify){

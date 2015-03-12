@@ -38,7 +38,7 @@ import numpy as np
 from scipy.ndimage.filters import rank_filter
 
 
-def dilate(ary, N, iterations): 
+def dilate(horizontal, ary, N, iterations): 
     """Dilate using an NxN '+' sign shape. ary is np.uint8."""
     """kernel = np.zeros((N,N), dtype=np.uint8)
     kernel[(N-1)/2,:] = 1
@@ -48,13 +48,21 @@ def dilate(ary, N, iterations):
     kernel[:,(N-1)/2] = 1
     dilated_image = cv2.dilate(dilated_image, kernel, iterations=iterations)"""
     
-    
-    kernel = np.zeros((N,N), dtype=np.uint8)
-    kernel[(N-1)/2,:] = 1
-    dilated_image = cv2.dilate(ary / 255, kernel, iterations=iterations)
+    if horizontal:
+        #Dilate horizontally
+        kernel = np.zeros((N,N), dtype=np.uint8)
+        kernel[(N-1)/2,:] = 1
+        dilated_image = cv2.dilate(ary / 255, kernel, iterations=iterations)
 
-    #dilated_image = cv2.dilate(ary / 255, cv2.getStructuringElement(cv2.MORPH_CROSS,(N, N-1)), iterations=iterations)
-    
+        #dilated_image = cv2.dilate(ary / 255, cv2.getStructuringElement(cv2.MORPH_CROSS,(N, N-1)), iterations=iterations)
+    else:
+        kernel = np.zeros((N,N), dtype=np.uint8)
+        kernel[(N-1)/2,:] = 1
+        dilated_image = cv2.dilate(ary / 255, kernel, iterations=iterations)
+
+        kernel = np.zeros((N,N), dtype=np.uint8)
+        kernel[:,(N-1)/2] = 1
+        dilated_image = cv2.dilate(dilated_image, kernel, iterations=iterations)
     
     return dilated_image
 
@@ -131,7 +139,7 @@ def remove_border(contour, ary):
     return np.minimum(c_im, ary)
 
 
-def find_components(edges, max_components):
+def find_components(edges, max_components, horizontal):
     """Dilate the image until there are just a few connected components.
 
     Returns contours for these components."""
@@ -142,12 +150,12 @@ def find_components(edges, max_components):
     n = 1
     while count > max_components:
         n += 1
-        dilated_image = dilate(edges, N=3, iterations=n)
+        dilated_image = dilate(horizontal, edges, N=3, iterations=n)
         contours, hierarchy = cv2.findContours(dilated_image, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         count = len(contours)
         
     #Image.fromarray(edges).show()
-    #Image.fromarray(255 * dilated_image).show()
+    Image.fromarray(255 * dilated_image).show()
 
     return contours
 
@@ -289,56 +297,16 @@ def vertical_additions(crop, im_size):
 
     return x1, y1, x2, y2 
 
-def process_image(path, out_path):
-    orig_im = Image.open(path)
-    scale, im = downscale_image(orig_im)
-
-    #print "done downscaling"
-
-    edges = cv2.Canny(np.asarray(im), 100, 200)
-
-    # TODO: dilate image _before_ finding a border. This is crazy sensitive!
-    contours, hierarchy = cv2.findContours(edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    borders = find_border_components(contours, edges)
-    borders.sort(key=lambda (i, x1, y1, x2, y2): (x2 - x1) * (y2 - y1))
-
-    #print "done finding borders"
-
-    border_contour = None
-    if len(borders):
-        border_contour = contours[borders[0][0]]
-        edges = remove_border(border_contour, edges)
-
-    edges = 255 * (edges > 0).astype(np.uint8)
-
-    # Remove ~1px borders using a rank filter.
-    maxed_rows = rank_filter(edges, -4, size=(1, 20))
-    maxed_cols = rank_filter(edges, -4, size=(20, 1))
-    debordered = np.minimum(np.minimum(edges, maxed_rows), maxed_cols)
-    edges = debordered
-
-    #print "applying rank filter"
-
-    #Find the contours of lines 
-    standard_height_line = 10
-    max_num_lines = im.size[1]/standard_height_line
-    contours = find_components(edges, max_num_lines)
-    if len(contours) == 0:
-        #print '%s -> (no text!)' % path
-        return
-
-    #print "done finding comoponents"
-
+def crop_per_line(im, contours, edges):
     #This is up to the point where we need to process the contours on our own
     #Grab the contours and crop them into their own individual images
     c_info = props_for_contours(contours, edges)
     c_info.sort(key=lambda x: x['y1'])
     #print 'Number of boxes:%d' %(len(c_info))
-    
 
     #Crop the lines and add it to our ditionary of lines
     page_lines = list()
-    #draw = ImageDraw.Draw(im)
+    draw = ImageDraw.Draw(im)
     for i, ct in enumerate(c_info):
         this_crop = ct['x1'], ct['y1'], ct['x2'], ct['y2']
         #print this_crop
@@ -348,7 +316,7 @@ def process_image(path, out_path):
             #Crop more vertically, in order to account for missing parts of the letters e.g. y, where the bottom part may be cut of
             this_crop = vertical_additions(this_crop, im.size)
         
-            #draw.rectangle(this_crop, outline='blue')
+            draw.rectangle(this_crop, outline='blue')
 
             #Set the crop
             this_crop_img = im.crop(this_crop)
@@ -382,8 +350,115 @@ def process_image(path, out_path):
                                 'text':''
                                 })
 
+    im.show()
+    return page_lines
+
+def process_image(path, out_path):
+    orig_im = Image.open(path)
+    scale, im = downscale_image(orig_im)
+
+    #print "done downscaling"
+
+    edges = cv2.Canny(np.asarray(im), 100, 200)
+
+    # TODO: dilate image _before_ finding a border. This is crazy sensitive!
+    contours, hierarchy = cv2.findContours(edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    borders = find_border_components(contours, edges)
+    borders.sort(key=lambda (i, x1, y1, x2, y2): (x2 - x1) * (y2 - y1))
+
+    #print "done finding borders"
+
+    border_contour = None
+    if len(borders):
+        border_contour = contours[borders[0][0]]
+        edges = remove_border(border_contour, edges)
+
+    edges = 255 * (edges > 0).astype(np.uint8)
+
+    # Remove ~1px borders using a rank filter.
+    maxed_rows = rank_filter(edges, -4, size=(1, 20))
+    maxed_cols = rank_filter(edges, -4, size=(20, 1))
+    debordered = np.minimum(np.minimum(edges, maxed_rows), maxed_cols)
+    edges = debordered
+
+    #print "applying rank filter"
+
+    #Find contours of text areas
+    horizontal = False #Dilate in all directions in order to get areas of text
+    max_num_text_areas = 10
+    text_area_contours = find_components(edges, max_num_text_areas, horizontal)
+    if len(text_area_contours) == 0:
+        return #print '%s -> (no text!)' % path
+
+    print 'text areas identified'
+
+    #draw = ImageDraw.Draw(im)
+    c_info = props_for_contours(text_area_contours, edges)
+    for c in c_info:
+        text_area_crop = c['x1'], c['y1'], c['x2'], c['y2']
+        text_area = im.crop(text_area_crop)
+
+        text_area_edges = cv2.Canny(np.asarray(text_area), 100, 200)
+
+        # TODO: dilate image _before_ finding a border. This is crazy sensitive!
+        text_area_contours, text_area_hierarchy = cv2.findContours(text_area_edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        text_area_borders = find_border_components(text_area_contours, text_area_edges)
+        text_area_borders.sort(key=lambda (i, x1, y1, x2, y2): (x2 - x1) * (y2 - y1))
+
+        #print "done finding borders"
+
+        text_area_border_contour = None
+        if len(text_area_borders):
+            text_area_border_contour = text_area_contours[text_area_borders[0][0]]
+            text_area_edges = remove_border(text_area_border_contour, text_area_edges)
+
+        text_area_edges = 255 * (text_area_edges > 0).astype(np.uint8)
+
+        # Remove ~1px borders using a rank filter.
+        maxed_rows = rank_filter(text_area_edges, -4, size=(1, 20))
+        maxed_cols = rank_filter(text_area_edges, -4, size=(20, 1))
+        debordered = np.minimum(np.minimum(text_area_edges, maxed_rows), maxed_cols)
+        text_area_edges = debordered
+
+        print 'a text area has been cropped'
+        #Begin croping per line on text_area
+        #Find the contours of lines 
+        standard_height_line = 10
+        max_num_lines = text_area.size[1]/standard_height_line
+        horizontal = True # We will dilate horizontally instead of horizontally and vertically
+
+        print 'about to perform contuoring on text area'
+
+        text_area_contours = find_components(text_area_edges, max_num_lines, horizontal)
+        if len(text_area_contours) == 0:
+            #print '%s -> (no text!)' % path
+            return
+
+        #draw.rectangle(this_crop, outline='blue')
+        #For each text area divide it by lines
+        page_lines = crop_per_line(text_area, text_area_contours, text_area_edges)
+
+        print 'crop next part'
+
     #im.show()
 
+   
+
+    #Find the contours of lines 
+    '''standard_height_line = 10
+    max_num_lines = im.size[1]/standard_height_line
+    horizontal = True # We will dilate horizontally instead of horizontally and vertically
+    contours = find_components(edges, max_num_lines, horizontal)
+    if len(contours) == 0:
+        #print '%s -> (no text!)' % path
+        return
+    '''
+    #print "done finding comoponents"
+
+    
+    #page_lines = crop_per_line(im, text_area_crop, edges)
+
+    #printing the information will send it to the nodejs process
     print json.dumps({'data':page_lines})
 
     #Uncomment for original functionality (from danvk) 
