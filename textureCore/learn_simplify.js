@@ -3,19 +3,19 @@
 	Before running activate the environment variables:
 	ADUAE04448LP-MX:bbr mh4047$ source venv/bin/activate
 
-	Script Learning
- 
+	Simplified Script Learning
 
- 1. Learn the lookup operators
-	entities and their dictionary and entity types 
-	Learn Regular Expressions for each dictionary entry
- 2. Learn a merge operator (???)
- 3. Learn which fields are optional and which are mandatory.
- 5. Learn the in operator. Identify where to look fields in. 
- 	Same group or child group? Before or after a field?
- 4. Learn a permute function. 
+	I just want to see a prototype of permute. 
+	So given highlight's types, school, major, year, under title 'education'
 
- We assume that dictionaries are loaded.
+-->	For each document
+	1. Locate the title 'education' or synonyms of it
+	2. Take in all lines after that and check if each word's type or regular expression
+		matches any of the above given types. 
+	3. Display
+
+	This assumes we have access to the document structure of the ones.
+	We assume that dictionaries are loaded.
 
 
 
@@ -35,7 +35,7 @@ var Q = require('Q');
 //kyle2.png for hocr font classification
 //Obtain results from imagingprocessing.js
 var data = require('./image2data').
-			image2data('img/', 'imc', 'png', beginLearn);
+			image2data('img/', 'kyle2', 'png', beginLearn);
 
 
 function beginLearn(data){
