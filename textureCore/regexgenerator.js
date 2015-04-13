@@ -25,6 +25,7 @@ var RegexGenerator = function(){
 				function doPermute(input, output, used, size, level) {
 					if (size == level) {
 						var word = output.slice();
+						word = word.join("");
 						results.push(word)
 
 						return;

@@ -13,12 +13,10 @@ var alchemy 		= new AlchemyAPI(APIKey);
 var miscutils 		= require('./miscutils');
 var executor 		= require('./execute');
 var _ 				= require('lodash');
-var Q 				= require('Q');
 
 var pat_name 		= './image_processing/document_structure/patricia0.json';
 var patricia_doc	= miscutils.fs_readFile(pat_name);
 
-//TODO create name highlights based on document structures 
 var name_highlights = {'highlights':
 						[
 							{'label':'Name',
@@ -96,10 +94,11 @@ function beginLearn(highlights){
 	//Learn executables!!!!!
 	//1. Learn regex executables, return [executable1, executable2], 
 	//where executable = {function:regex, function_params:[   ]}
-	learnRegex(highlights);
+	learnRegex(highlights.highlights)
 
 	//2. Learn inDict executables, return [executable1, executable2, ],
 	//where executable = {}
+	.then(learnIsEntity(highlights.highlights))
 
 	//3. Learn isEntityType = {}
 	//where executable = {}
@@ -119,109 +118,181 @@ function beginLearn(highlights){
 
 /*
  Given an array of highlights, produce all possible regular expressions that describe it.
- @returns is
+ @returns is a promise; and the promise is to return an array of regular expressions 
+
+ Note to self: Currently we check if a regex doesn't return a null when asked for a match to the text e.g. RAVI AMON
+ 				and we also check if the regex can describe the highlight, as opposed to extracting is from it's text 
+ 				e.g. find a regex that can describe Ravi Amon; but not extract Ravi Amon from Ravi AmonDeschandel
+ 				In other words we are only checking a regex is only "applicable" to a set of highlights
+ 				based on whether it can describe that text exactly.
+ 				Shouldn't we also check if a regex can extract such a text from the whole line? or from the whole Section?
+
+ 				Moreover, if we decide to we need to be specific and describe the text with moredescriptions, wecan divide a highlight up by spaces
+ 				Spaces are key in that they separate words, and these words can be described by the regular expressions.
+ 				The patterns of the word's regular expressions would give a much more detailed pattern as opposed to 
+ 				only a three token regex pattern. The reason why FE uses such a pattern was because they operators that describe
+ 				the patterns made the mundane three tokens powerful enough to be expressive.
 */
  function learnRegex(highlights, executables){
- 	var valid_regex 	= [];
+ 	var Q 			= require('Q');
+ 	var deferred   	= Q.defer();
 
- 	// Read the docstructure of the files
- 	highlights.highlights.forEach(function(elem){
+ 	highlights.forEach(function(elem){  							// Read the docstructure of the files
  		elem.file_contents = miscutils.fs_readFile(elem.file);
  	});
 
-	// For loop through each regex in regex[]
- 	for(var k = 0; k < 1 ; k++){
- 		var regex_elem = regex[k]; 
-		var regex_promises 	= [];				// Gather all the regex promises and then execute them at one go
+	var regex_check_promises = [];									// The array that contains the promises on checking a regex against a set of highlights
+ 	for(var k = 0; k < regex.length ; k++){ 						// For loop through each regex in regex[]
+ 		var regex_elem 	= regex[k]; 
+	 	var promise 	= check_regex_applicable(regex_elem, highlights)
+	 	regex_check_promises.push(promise)	 						// Collect promises
 
-	 	// For loop through each highlight
-	 	for(var l = 0; l < highlights.highlights.length; l++){
-	 		var highlight_obj 	= highlights.highlights[l];
-
-	 		// Create an executable capable of testing whether the text can be extracted from the line with regex
-	 		var executable 		= [
-									//{'function':'from', 'function_param': [highlight_obj.line_type, highlight_obj.line_number]},						// First index should always be a from; params should describe how to get there
-									{'function':'regular_expression'  , 'function_param': [ regex_elem, "", highlight_obj.text ]}												// is params: [ regex]
-								];
-			
-			miscutils.logMessage("Regex learner. regex: " + regex_elem + ", check in line: " + highlight_obj.text, 1);
-			//Figure out a way to properly get the results of the execution 
-			regex_promises.push(executor.extract( highlight_obj.file, highlight_obj.file_contents, executable ))
-	 		
-	 	}
-	 	//Gather the regex that works
-
-	 	var allPromise = Q.all(regex_promises );
-	    allPromise.then(function(results){
-	    	console.log(results)
-	    })
  	}
 
+ 	Q.all(regex_check_promises).then(function(applicable_regex){
+	 	applicable_regex = _.reject(applicable_regex, function(n) {
+			return n == -1;
+		});
+	 	miscutils.logMessage("Array of applicable regex: ", 					1);
+	 	miscutils.logMessage(applicable_regex, 									2);
+	 	miscutils.logMessage("Applicable regexes:" + applicable_regex.length, 	1);
+
+		deferred.resolve(applicable_regex);
+	})	
+
+ 	return deferred.promise;
  }
 
 /*
-	@data takes in a list of grouped lines and learns NER associations for each line
-	e.g. [{group:[line1, line2]}, {group:[line3, line4]}]
+	@regex_elem is the regex to check the @highlights, an array, againts
+	@returns a promise to do it
 */
-function learnLookup(data){
+function check_regex_applicable(regex_elem, highlights){
+	var Q 				= require('Q');
+ 	var deferred    	= Q.defer();
+	var regex_promises  = [];
 
- 	//Lookup for words with NER, wordnet, and dictionary in highlights
- 	//Highlights should have associated entity types and synonyms (Graph combo here)
- 	learnNERonData(data, function(nerdata){
- 		//miscutils.logMessage(JSON.stringify(nerdata), 1);
+ 	for(var l = 0; l < highlights.length; l++){ 						// For loop through each highlight
+ 		var highlight_obj 	= highlights[l];
+ 		var executable 		= [ 										// Create an executable capable of testing whether the text can be extracted from the line with regex
+								{'function':'regular_expression'  , 'function_param': [ regex_elem, "", highlight_obj.text ]}												// is params: [ regex]
+							];
+		
+		miscutils.logMessage("Regex learner. regex: " + regex_elem + ", check in line: " + highlight_obj.text, 2);
+		var promise = executor.extract( highlight_obj.file, highlight_obj.file_contents, executable );
+ 		regex_promises.push(promise)
+ 	}
+ 	
+ 	Q.all(regex_promises).then( function(all_matches){					// all_matches contains an array of match() results, e.g. [["text_match", ...], null, [...], etc]
+ 		// A regex is applicable if it can describes all highlights e.g. non of the elements in data
+ 		// is null and all the matches equal the original highlight
+ 		var add_flag = true;
+ 		for(var t=0; t<all_matches.length; t++){
+ 			var match_res 		= all_matches[t];
+ 			var orig_highlight 	= highlights[t].text
+
+ 			if(match_res == null || match_res[0] != orig_highlight){	//Check if the extracted equals the original highlight
+				add_flag = false;
+				break;
+ 			}
+ 		}
+ 		if(add_flag){
+ 			miscutils.logMessage("Regex: " + regex_elem + " matches: " + all_matches, 2)
+ 			deferred.resolve(regex_elem);
+ 		}else{
+ 			deferred.resolve(-1);
+ 		}
+ 	})
+ 	return deferred.promise
+}
+
+/*
+	@highlights takes in a list of highlighted text and learns NER associations for each line
+
+	This learn function takes in a list of highlights that the Is operator must be able to extract e.g. [“Maeda”, “Aisya”]. 
+	The output is an array of applicable entity types e.g. [“Person”], where an entity type is applicable when it identifies each of the elements in the list of highlights.
+*/
+function learnIsEntity(highlights){
+
+ 	getNER(highlights).then(function(entities){
+ 		console.log(entities)
+ 		// Check if all the highlights match all the entities
+ 		// Given entities [{entity, word}, {entity, word}, ....]
+ 		// Given highlights [{highlight}, {highlight}, ....]
+ 		// Check if each highlight exists in entities
+ 		// 
+ 		var flatten_entities = _.flatten(entities);
+ 		miscutils.logMessage("Flatten:", 1)
+ 		miscutils.logMessage(flatten_entities, 1)
+ 		// Group the flattened array by the entity
+ 		var grouped_entities = _.groupBy(flatten_entities, function(entity) {
+			return entity.type;
+		}); // grouped_entities = {Person:[], Building:[], ...}
+		
+		var applicable_entities = [];									// Entities that are applicable on the given highlights
+		for(var key in grouped_entities){								// Loop through each group and for each entity group, check if each highlight exists
+			var entity_group = grouped_entities[key];					// Check if each highlight exists within entity_group
+			var text_highlight = _.pluck(highlights, 'text');			// An array of only the highlight's text that belong to this entity e.g. ['Ravi Amon', 'Chris Sample']
+			var text_entity_group = _.pluck(entity_group, 'text');		// An array of only the NER texts that that belong to this entity e.g. ['Ravi Amon', 'Chris']
+			miscutils.logMessage(text_entity_group, 1)
+			miscutils.logMessage(text_highlight, 1)
+			if (text_highlight){	// If the highlight array is equal to the entity's text array, then 
+
+			}
+		}
+
+
+ 		// Then, collect and count all the entities 
+ 		var freq = []	// An elem in freq e.g. {entity:"Person", frequency:1}
+ 		for(var i=0; i<entities.length; i++){
+
+ 		}
  	});
 
- 	learnRegex(data)
+
+
  	
  }
 
 
- function learnIn(){
+ function learnInDict(){
 
  }
 
 
 /*
-	@data from image2data.js e.g. array of groups; a group is an array of lines
-	@callback passes data with entity learned
+	@highlights from image2data.js e.g. array of groups; a group is an array of lines
+	
 */
-function learnNERonData(data, callback){
+function getNER(highlights){
+	var Q 			 = require('Q');
+ 	var deferred   	 = Q.defer();
 	var NER_promises = [];
 
- 	//NER lookup
- 	//Loop through each group
-    for(var i=1; i<data.length; i++){
-    	var groupElem = data[i].group;
-        //Loop through each line in a group
-        groupElem.forEach(function(lineElem){
-    	 	NER_promises.push(NER(lineElem.text, lineElem.line_number));
-        });
+ 	// NER lookup
+    for(var i=0; i<highlights.length; i++){  							
+    	var highlight = highlights[i].text;						// Loop through each highlight
+    	 	NER_promises.push(NER(highlight));
     }
 
-
-    //After all the NER is done on all lines, reaad the result and add to our result data
+    // After all the NER is done on all lines, read the result and add to our result data
     var allPromise = Q.all(NER_promises );
     allPromise.then(function(allentities){
-    	//Loop through entities and then add then to their reepective lines
-    	var entInd = 0;
-		//Loop through each group
-	    for(var i=1; i<data.length; i++){
-	        //Loop through each line in a group
-	        data[i].group.forEach(function(lineElem){
-	        	lineElem.entities = allentities[entInd];
-	        	entInd++; 
-	    	});
-	    }
 
-	    miscutils.logMessage("All done grabbing data from NER", 1);
-	    miscutils.logMessage(JSON.stringify(data), 1);
-	    callback(data);
+	    miscutils.logMessage("All done grabbing data from AlchemyAPI",  1);
+	    miscutils.logMessage(JSON.stringify(allentities), 				1);
+		deferred.resolve(allentities);
 
     }, console.err);
+ 	return deferred.promise;
+
 }
 
-//NER() is invoked by an event emitter set by process() in order to process PDF asynch
+/*
+	@totaltext is the text to find entities
+*/
 function NER (totaltext ){
+	var Q 		 = require('Q');
 	var deferred = Q.defer();
 
 	alchemy.entities(totaltext, {}, function(err, response) {
@@ -229,19 +300,16 @@ function NER (totaltext ){
 			miscutils.logMessage(err, 1);
 			deferred.reject(err);
 		}else{
-			// See http://www.alchemyapi.com/api/entity/htmlc.html for format of returned object
-			var entities = response.entities;
+			var entities = response.entities; 				// See http://www.alchemyapi.com/api/entity/htmlc.html for format of returned object
  			//Entities is an arrays of objects [{text, type}, ...]
-			miscutils.logMessage(totaltext, 2);
-			miscutils.logMessage(entities, 2);
+			miscutils.logMessage(totaltext, 							2);
+			miscutils.logMessage(entities, 								2);
 			miscutils.logMessage('-----------------------------------', 2);
 			deferred.resolve(entities);
-
-		
  		}
 	});
 
-	return deferred.promise; // the promise is returned
+	return deferred.promise; // The promise is returned
 };
 
 /*
@@ -251,7 +319,7 @@ function NER (totaltext ){
 	This function indicates which lines are highlighted: [{highlights:...}, {group:...}]
 
  */
-function findHighlights(data){
+/*function findHighlights(data){
 	//For now we hard code the information
 	//Insert highlight information into the 0th index
 	data.splice(0,0, 
@@ -290,3 +358,4 @@ var highlights 		= {'highlights':
 							}
 						]
 					}
+*/

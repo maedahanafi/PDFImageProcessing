@@ -122,6 +122,7 @@ function extract(filename, document_structure, executables){
 	// Check if the first line contains a from function, otherwise, assume 
 	// that the string to operate on has already been extracted and appended to the op_params
 	if(executables[0].function == 'from'){
+		// This is the normal case, where valid rules are execute e.g. the from statement is provided and so is the operator
 		var from_elem 	= executables[0].function_param;							// The first element in executables[] is always a from statement
 		var box_elem 	= from_elem[0];
 		
@@ -135,17 +136,21 @@ function extract(filename, document_structure, executables){
 			
 			// op_string is the string to apply the operator on. After each iteration, it is bound to change.
 			var op_string 	= _.reduce(string_arr, function(sum, string_elem){ return sum + string_elem });
-
-			var operator 	= executables[i].function; 								// Operator e.g. in
 			var op_params 	= executables[i].function_param;						// Operator params e.g. [name_dictionary, etc]
 			op_params.push(op_string);  											// Append the string that the executable will be applied to. 
 
 			op_string = execute(op_string, executables, i);
 			deferred.resolve(op_string);
 		});
-	}else{
-		var i = 0;
-		var res_string = execute("", executables, i);									// The string to operate on is already embedded within the executable
+	}else{	
+		// This case is normally used when the string to operate on has already been extracted e.g. a from statement doesn't exist,
+		// from the document structure, thus there is no need to run a 'from' operator.
+		// This case should be used with caution and normally should only be invoked for testing the input and output
+		// of the operators e.g. in, is, etc, such are the learning phase
+
+		var i 		   = 0;
+		var op_string  = executables[i].function_param[executables.length-1];		// The string to operate on, which in this case is already appended to the executable's function_param[]
+		var res_string = execute(op_string, executables, i);						// The string to operate on is already embedded within the executable
 		deferred.resolve(res_string);
 	}
 	
@@ -164,6 +169,8 @@ exports.extract = extract;
 
 function execute(op_string, executables, i){
 	// Assuming that executables.length == 1
+	var operator 	= executables[i].function; 								// Operator e.g. in
+	var op_params 	= executables[i].function_param;						// Operator params e.g. [name_dictionary, etc]
 
 	var Q           = require('Q');
     var deferred    = Q.defer();
@@ -172,21 +179,18 @@ function execute(op_string, executables, i){
 
 		isOp.apply(operator, op_params).then(function(data){
 			op_string = data;										// Execute operator and Assign a new op_string
-			miscutils.logMessage("Finale result after executing " + operator, 	1)
-			miscutils.logMessage(op_string, 									1)
+			miscutils.logMessage("Finale result after executing " + operator, 	2)
+			miscutils.logMessage(op_string, 									2)
 			deferred.resolve(op_string);
 
 		});
 
 	}else if ( _.isEqual(operator, "in") ){
-		console.log("executing for in 1")
-		console.log(operator)
-		console.log(op_params)
+		
 		inDict.apply(operator, op_params).then(function(data){
-			console.log("loel")
 			op_string = data;										// Execute operator and Assign a new op_string
-			miscutils.logMessage("Finale result after executing " + operator, 	1)
-			miscutils.logMessage(op_string, 									1)
+			miscutils.logMessage("Finale result after executing " + operator, 	2)
+			miscutils.logMessage(op_string, 									2)
 			deferred.resolve(op_string);
 
 		});
@@ -194,8 +198,8 @@ function execute(op_string, executables, i){
 	}else if ( _.isEqual(operator, "regular_expression") ){
 
 		op_string = regular_expression.apply(operator, op_params);	// Execute operator and Assign a new op_string
-		miscutils.logMessage("Finale result after executing " + operator, 		1)
-		miscutils.logMessage(op_string, 										1)
+		miscutils.logMessage("Finale result after executing " + operator, 		2)
+		miscutils.logMessage(op_string, 										2)
 		deferred.resolve(op_string);
 
 	}
