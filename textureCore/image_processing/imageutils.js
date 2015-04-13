@@ -1,6 +1,47 @@
 //Image utilities from imagemagick
 var im = require('imagemagick');
 
+exports.pdf2image = function(input, output){
+    var Q           = require('Q');
+    var deferred    = Q.defer();
+    console.log('pdf2image')
+    im.convert(/*['-verbose',
+                '-density',
+                '150',
+                '-trim',
+                path_to_pdf_dir+filename,
+                '-quality',
+                '100',
+                '-sharpen',
+                '0x1.0',
+                path_to_pdf_img_dir+filename+'.'+img_ext]*/
+            ['-verbose',        //Solving the issue of dark images converted     http://stackoverflow.com/questions/10934456/imagemagick-pdf-to-jpgs-sometimes-results-in-black-background
+                '-density',
+                '400',
+                '-colorspace',
+                'sRGB',
+                input, 
+                '-resize',
+                '400%',
+                '-quality',
+                '95',
+                output],
+        function(err, stdout){
+            if (err){
+                console.log(err);
+                //callback(err);
+                deferred.reject(err)
+                
+            }else {
+                console.log('stdout:' + stdout);
+
+                deferred.resolve(stdout)
+                //callback(stdout);
+            }
+        }
+    );
+    return deferred.promise;
+}
 
 //Trim the image evenly first
 exports.trim = function trim(inputfile, outputfile, callback){
@@ -77,7 +118,7 @@ exports.img2blackandwhite = function img2blackandwhite(inputfile, outputfile, ca
 
 
 // too blurry
-exports.transparency2white = function transparency2white(inputfile, outputfile, callback) {
+function transparency2white(inputfile, outputfile, callback) {
     //First convert the image's transparency into white color
     //convert -flatten img1.png img1-white.png
 
@@ -97,7 +138,7 @@ exports.transparency2white = function transparency2white(inputfile, outputfile, 
      }
      );
 }
-
+exports.transparency2white =transparency2white;
 
 exports.textfill = function textfill(inputfile, outputfile, callback) {
     //http://www.imagemagick.org/discourse-server/viewtopic.php?t=22625
@@ -142,6 +183,7 @@ exports.morphology = function morphology(inputfile, outputfile, callback){
  -morphology Hit-and-Miss "1x8:1,0,1,1,0,0,0,0" ^
  w2.png
  */
+ 
     im.convert(
         [inputfile,
             '-morphology',

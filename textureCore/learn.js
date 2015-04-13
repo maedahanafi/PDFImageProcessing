@@ -1,54 +1,163 @@
 /*
+	Learn regex, inDict, isEntity operators.
+
+*/
+var generator 		=  new require("./regexgenerator.js").RegexGenerator() ;
+var regex 			= generator.init();
+
+// AlchemyAPI API key
+var APIKey	 		= "37abd9121c9dc242fdd73073c0f68b935e6631a3";
+var AlchemyAPI 		= require('alchemy-api');
+var alchemy 		= new AlchemyAPI(APIKey);
+
+var miscutils 		= require('./miscutils');
+var executor 		= require('./execute');
+var _ 				= require('lodash');
+var Q 				= require('Q');
+
+var pat_name 		= './image_processing/document_structure/patricia0.json';
+var patricia_doc	= miscutils.fs_readFile(pat_name);
+
+//TODO create name highlights based on document structures 
+var name_highlights = {'highlights':
+						[
+							{'label':'Name',
+							 'page_number': 0,
+							 "line_number": 0,
+							 "group_number":0,
+							 'word_number':0,	//Delimited by spaces, the nth word in the sentence
+							 'text': 'RAVI AMON',
+							 "line_type":"TITLE",
+							 'file':'./image_processing/document_structure/ravi0.json'
+							}, 
+							{'label':'Name',
+							 'page_number': 0,
+							 "line_number": 0,
+							 "group_number":0,
+							 'word_number':0,	//Delimited by spaces, the nth word in the sentence
+							 "line_type":"TITLE",
+							 'text': 'RICHARD A. LEVINSON',
+							 'file':'./image_processing/document_structure/richard0.json'
+							},
+							{'label':'Name',
+							 'page_number': 0,
+							 "line_number": 0,
+							 "group_number":0,
+							 'word_number':0,	//Delimited by spaces, the nth word in the sentence
+							 "line_type":"TITLE",
+							 'text': 'PATRICIA P. PATTERSON',
+							 'file':'./image_processing/document_structure/patricia0.json'
+							},
+							{'label':'Name',
+							 'page_number': 0,
+							 "line_number": 0,
+							 "group_number":0,
+							 'word_number':0,	//Delimited by spaces, the nth word in the sentence
+							 "line_type":"SECTION",
+							 'text': 'JANE M. SAMPLE',
+							 'file':'./image_processing/document_structure/sample0.json'
+							},
+							{'label':'Name',
+							 'page_number': 0,
+							 "line_number": 1,
+							 "group_number":0,
+							 'word_number':0,	//Delimited by spaces, the nth word in the sentence
+							 "line_type":"SECTION",
+							 'text': 'SCOTT E. LEFKOWITZ',
+							 'file':'./image_processing/document_structure/scott0.json'
+							}/*,
+							{'label':'Name',
+							 'page_number': 0,
+							 "line_number": 0,
+							 "group_number":0,
+							 'word_number':0,	//Delimited by spaces, the nth word in the sentence
+							 "line_type":"TITLE",
+							 'text': 'MICHAEL D. SIERRA',
+							 'file':'./image_processing/document_structure/sierra0.json'
+							},
+							{'label':'Name',
+							 'page_number': 0,
+							 "line_number": 0,
+							 "group_number":0,
+							 'word_number':0,	//Delimited by spaces, the nth word in the sentence
+							 "line_type":"TITLE",
+							 'text': 'Susan B. Simmons',
+							 'file':'./image_processing/document_structure/susan0.json'
+							}*/
+						]
+					};
+
+var BOXES = ['Line', 'Section', 'Page'];
+
+
+beginLearn(name_highlights)
+function beginLearn(highlights){
+	miscutils.logMessage('Begin Learning', 1);
+	//Learn executables!!!!!
+	//1. Learn regex executables, return [executable1, executable2], 
+	//where executable = {function:regex, function_params:[   ]}
+	learnRegex(highlights);
+
+	//2. Learn inDict executables, return [executable1, executable2, ],
+	//where executable = {}
+
+	//3. Learn isEntityType = {}
+	//where executable = {}
 	
-	Before running activate the environment variables:
-	ADUAE04448LP-MX:bbr mh4047$ source venv/bin/activate
+	//4. Produce permutations of executables here [boxtype, optype] 
+	//e.g. [{function:from,}, {function:regex1}], [{function:from,}, {function:regex2}], [{function:from,}, {function:inDict}]
 
-	Script Learning
- 
+	// First we identify where the highlights are
+	//data = findHighlights(data); 
 
- 1. Learn the lookup operators
-	entities and their dictionary and entity types 
-	Learn Regular Expressions for each dictionary entry
- 2. Learn a merge operator (???)
- 3. Learn which fields are optional and which are mandatory.
- 5. Learn the in operator. Identify where to look fields in. 
- 	Same group or child group? Before or after a field?
- 4. Learn a permute function. 
+	// We begin by learning descriptions of the highlights
+	//learnLookup(data);
 
- We assume that dictionaries are loaded.
+	// Learn boxes that are applicable to the highlights.
 
-
-
- */
-
-//AlchemyAPI API key
-var APIKey = "37abd9121c9dc242fdd73073c0f68b935e6631a3";
-var AlchemyAPI = require('alchemy-api');
-var alchemy = new AlchemyAPI(APIKey);
-
-var miscutils = require('./miscutils');
-var _ = require('lodash');
-var Q = require('Q');
-
-
-//IMP michael1.png for HIGHLIGHT EXTRACTION!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-//kyle2.png for hocr font classification
-//Obtain results from imagingprocessing.js
-var data = require('./image2data').
-			image2data('img/', 'imc', 'png', beginLearn);
-
-
-function beginLearn(data){
-	if(data!='err'){
-		miscutils.logMessage('Begin Learning', 1);
-		//First we identify where the highlights are
-		//data = findHighlights(data); 
-		//We begin by learning descriptions of the highlights
-		//learnLookup(data);
-	}else{
-		miscutils.logMessage('Error in image2data process. ', 1);
-	}
 }
+
+/*
+ Given an array of highlights, produce all possible regular expressions that describe it.
+ @returns is
+*/
+ function learnRegex(highlights, executables){
+ 	var valid_regex 	= [];
+
+ 	// Read the docstructure of the files
+ 	highlights.highlights.forEach(function(elem){
+ 		elem.file_contents = miscutils.fs_readFile(elem.file);
+ 	});
+
+	// For loop through each regex in regex[]
+ 	for(var k = 0; k < 1 ; k++){
+ 		var regex_elem = regex[k]; 
+		var regex_promises 	= [];				// Gather all the regex promises and then execute them at one go
+
+	 	// For loop through each highlight
+	 	for(var l = 0; l < highlights.highlights.length; l++){
+	 		var highlight_obj 	= highlights.highlights[l];
+
+	 		// Create an executable capable of testing whether the text can be extracted from the line with regex
+	 		var executable 		= [
+									//{'function':'from', 'function_param': [highlight_obj.line_type, highlight_obj.line_number]},						// First index should always be a from; params should describe how to get there
+									{'function':'regular_expression'  , 'function_param': [ regex_elem, "", highlight_obj.text ]}												// is params: [ regex]
+								];
+			
+			miscutils.logMessage("Regex learner. regex: " + regex_elem + ", check in line: " + highlight_obj.text, 1);
+			//Figure out a way to properly get the results of the execution 
+			regex_promises.push(executor.extract( highlight_obj.file, highlight_obj.file_contents, executable ))
+	 		
+	 	}
+	 	//Gather the regex that works
+
+	 	var allPromise = Q.all(regex_promises );
+	    allPromise.then(function(results){
+	    	console.log(results)
+	    })
+ 	}
+
+ }
 
 /*
 	@data takes in a list of grouped lines and learns NER associations for each line
@@ -65,29 +174,12 @@ function learnLookup(data){
  	learnRegex(data)
  	
  }
-/*
- Given an array of highlights, produce all possible regular expressions that describe it.
- @data is the datastructure from image2data with additional information in it
- @returns is
-*/
- function learnRegex(data){
- 	var generator =  new require("./RegexGenerator.js").RegexGenerator() ;
-    generator.init()
 
- }
-
-
- function learnOptional(){
-
- }
 
  function learnIn(){
 
  }
 
- function learnPermute(){
- 	
- }
 
 /*
 	@data from image2data.js e.g. array of groups; a group is an array of lines
@@ -184,7 +276,17 @@ function findHighlights(data){
 	return data;
 }
 
-
-
-
-
+var highlights 		= {'highlights':
+						[
+							{'label':'School',
+							 "line_number": 72,
+							 'word_number':8,	//Delimited by spaces, the nth word in the sentence
+							 'text': 'University at Nevada'
+							}, 
+							{'label':'Major',
+							 'line_number':72,
+							 'word_number': 0,
+							 'text':'MBA'
+							}
+						]
+					}

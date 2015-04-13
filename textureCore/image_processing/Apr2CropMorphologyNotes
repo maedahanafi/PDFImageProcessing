@@ -1,0 +1,104 @@
+1. Test with nagy images on /img folder. Source of nagy images are from TextureAllMVS 
+
+	- Call from crop_morphology. Not working. From TextureAllMVS
+	(venv)ADUAE04448LP-MX:image_processing mh4047$ python crop_morphology.py img/nagy-1.png
+	img/nagy-1.png src data type = 17 is not supported
+
+	- Call from image2data.js. From TextureAllMVS
+	node image2data.js		For img/nagy-1.png
+	stderr:OpenCV Error: Assertion failed (scn == 3 || scn == 4) in cvtColor, file /tmp/opencv-BYykUp/opencv-2.4.10.1/modules/imgproc/src/color.cpp, line 3739
+
+
+2. Redo above but with confirmed images converted using old quality settings and from TextureAllMVS. 
+
+	- Call from crop_morphology. 
+	(venv)ADUAE04448LP-MX:image_processing mh4047$ python crop_morphology.py img/nagy-1.png
+	img/nagy-1.png src data type = 17 is not supported
+
+	- Call from image2data.js: imagedocuments2structure(['img/nagy-1.png'], true); Not working
+	(venv)ADUAE04448LP-MX:image_processing mh4047$ node image2data.js For img/nagy-1.png
+	stderr:OpenCV Error: Assertion failed (scn == 3 || scn == 4) in cvtColor, file /tmp/opencv-BYykUp/opencv-2.4.10.1/modules/imgproc/src/color.cpp, line 3739
+
+
+3. Test with nagy images in /test_cases folder, definitely not working
+	
+
+4. Test with old version of crop_morphology.py (before the division between extract line and extract, which is what we will call throughout this document)
+	
+	-  On the nagy image within the img file, produced by TextureAllMVS
+	(venv)ADUAE04448LP-MX:image_processing mh4047$ python old_crop_morphology.py img/nagy-1.png
+	img/nagy-1.png src data type = 17 is not supported
+
+	- On an image from img folder. Working! img has always been there.
+	(venv)ADUAE04448LP-MX:image_processing mh4047$ python old_crop_morphology.py img/michael1BW.png 
+
+	- Also works on the new version also works
+	(venv)ADUAE04448LP-MX:image_processing mh4047$ python crop_morphology.py img/michael1BW.png
+
+	- Work through image2data.js: imagedocuments2structure(['img/michael1.png'], true); Works!
+	(venv)ADUAE04448LP-MX:image_processing mh4047$ node image2data.js 
+
+
+5. Test on first converting the images in BW with imagemagick and then run crop_morphology. nagy-1.png from TextureAllMVS, a recent image from above at 
+	- Convert into BW
+	(venv)ADUAE04448LP-MX:image_processing mh4047$ convert img/nagy-1.png -threshold 50% img/nagy-1BW.png
+
+	- crop_morphology 
+	(venv)ADUAE04448LP-MX:image_processing mh4047$ python crop_morphology.py img/nagy-1BW.png
+	img/nagy-1BW.png src data type = 17 is not supported
+
+	-old crop_morphology
+	(venv)ADUAE04448LP-MX:image_processing mh4047$ python old_crop_morphology.py img/nagy-1BW.png
+	img/nagy-1BW.png src data type = 17 is not supported
+
+	- through image2data.js: imagedocuments2structure(['img/nagy-1BW.png'], true)
+	(venv)ADUAE04448LP-MX:image_processing mh4047$ node image2data.js 
+	Reading from stdout err:SyntaxError: Unexpected token b
+	Reading from stdout err:begin parse
+	img/nagy-1BWBW.png src data type = 0 is not supported
+
+
+6. Perhaps if we somehow figure out img/michael1BW.png was formated, then we can figure out an exact combination of image processing that works for crop_morphology. 
+	
+	- Test on michael1.png again (img/michael1-ver2.png). Convert the pdf into png with TextureAllMVS, and then rename into michael1-ver2.png
+
+	- crop_morphology. Works
+	(venv)ADUAE04448LP-MX:image_processing mh4047$ python crop_morphology.py img/michael1-ver2.png
+
+	- crop_morphology. but first convert to BW via imagemagick's convert. Not working.
+	(venv)ADUAE04448LP-MX:image_processing mh4047$ python crop_morphology.py img/michael1-ver2BW.png
+	img/michael1-ver2BW.png src data type = 0 is not supported
+	(venv)ADUAE04448LP-MX:image_processing mh4047$ convert img/michael1-ver2.png -threshold 50% img/michael1-ver2BW.png
+
+	- old_crop_morphology. Works since all images, dilated and cropped, pop out but a minor bug not related to image format
+	(venv)ADUAE04448LP-MX:image_processing mh4047$ python old_crop_morphology.py img/michael1-ver2.png
+	img/michael1-ver2.png list index out of range
+
+	- old crop_morphology with BW version. this morphology version does contain a BW code from cv2. Not working
+	(venv)ADUAE04448LP-MX:image_processing mh4047$ python old_crop_morphology.py img/michael1-ver2BW.png
+	img/michael1-ver2BW.png src data type = 0 is not supported
+
+	- old crop_morphology with BW version. this morphology version does NOT contain a BW code from cv2. Not working
+	(venv)ADUAE04448LP-MX:image_processing mh4047$ python old_crop_morphology.py img/michael1-ver2BW.png
+	img/michael1-ver2BW.png src data type = 0 is not supported
+
+	- image2data.js. No need for this one; above cases show that the imagemagick conversion is causing format issues.
+
+
+Comment out the imagemagick BW conversion in image2data.js; since the crop_morophology.py already has its own BW code via cv2
+	- image2data.js on michael1-ver2.png without the imagemagick BW conversion; imagedocuments2structure(['img/michael1-ver2.png'], true); Works
+	(venv)ADUAE04448LP-MX:image_processing mh4047$ node image2data
+
+	- Similar as above, except on img/nagy-1.png; imagedocuments2structure(['img/nagy-1.png'], true); Not working
+	(venv)ADUAE04448LP-MX:image_processing mh4047$ node image2data
+	img/nagy-1.png src data type = 17 is not supported
+
+	- Repeat the above except on nagy-1.png from TextureAllMVS (again) ; Works, must have just needed to get a "clean image" that is not yet processed with imagemagick's conversion
+	(venv)ADUAE04448LP-MX:image_processing mh4047$ node image2data
+
+
+------------------------------------------------------------------------------------------------------------
+
+
+
+

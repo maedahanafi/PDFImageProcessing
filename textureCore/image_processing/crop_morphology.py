@@ -51,6 +51,7 @@ def assign_line_type(document_structure):
     A more advanced grouping is expected later on through standard deviation between gaps as this method is quite basic.
    
     Also if the line heights aren't too different from each others, then we should treat them equal
+    
     Edit:
     A line is a title, when its height is greater than the 75th percentile among all heights. 
     If there are more than one
@@ -59,17 +60,12 @@ def assign_line_type(document_structure):
     '''
     flatten_group_arr   = reduce(lambda x,y: x+y,[group['group'] for group in document_structure]) 
     all_line_height_arr = [line['line_height'] for line in flatten_group_arr]
-    #max_height          = max(all_line_height_arr)
     maxpercentile       = np.percentile(all_line_height_arr, 75)
 
     for ctr in document_structure:
         group               = ctr['group']
-        #line_height_arr     = [line['line_height'] for line in group]
-        #max_group_height    = max(line_height_arr)
-        #max_height_count    = line_height_arr.count(max_group_height) 
-
+        
         for i, line in enumerate(group):
-            #if (line['line_height'] ==  max_group_height and i == 0 and max_height_count == 1 and len(group) > 1) or (line['line_height'] ==  max_height and len(group) == 1):
             if i == 0 and line['line_height'] > maxpercentile:
                 line['line_type'] = 'TITLE'
             else:
@@ -82,18 +78,18 @@ def is_valid_crop(crop, im_size):
     x1, y1, x2, y2  = crop
     width, height   = im_size
 
-    #Check if the crop makes sense e.g. too small 
+    # Check if the crop makes sense e.g. too small 
     if abs(x1-x2) < 5 or abs(y1-y2) < 5:
         return False
 
-    #Check if the crop doesn't exceed the image size
+    # Check if the crop doesn't exceed the image size
     if  x1 < 0 or x1 > width or x2 < 0 or x2 > width or y1 < 0 or y1 > height or y2 < 0 or y2 > height :
         return False
 
     return True
 
 
-#Crop more vertically, in order to account for missing parts of the letters e.g. y, where the bottom part may be cut of
+# Crop more vertically, in order to account for missing parts of the letters e.g. y, where the bottom part may be cut of
 def vertical_additions(addition, crop, im_size):
     x1, y1, x2, y2  = crop
     width, height   = im_size
@@ -111,12 +107,12 @@ def vertical_additions(addition, crop, im_size):
 
 def crop_per_line(im, contours, edges):
 
-    #This is up to the point where we need to process the contours on our own
-    #Grab the contours and crop them into their own individual images
+    # This is up to the point where we need to process the contours on our own
+    # Grab the contours and crop them into their own individual images
     c_info              = props_for_contours(contours, edges)
     c_info.sort(key=lambda x: x['y1'])
     
-    #Crop the lines and add it to our ditionary of lines
+    # Crop the lines and add it to our ditionary of lines
     page_lines          = list()
     draw                = ImageDraw.Draw(im)
 
@@ -194,10 +190,12 @@ def dilate(horizontal, ary, N, iterations):
         kernel              = np.zeros((N,N), dtype=np.uint8)
         kernel[(N-1)/2,:]   = 1
 
-        dilated_image       = cv2.dilate(ary / 255, cv2.getStructuringElement(cv2.MORPH_CROSS,(5,1)), iterations=iterations)
-        #dilated_image = cv2.dilate(ary / 255, kernel, iterations=iterations)
-        #dilated_image = cv2.dilate(ary / 255, cv2.getStructuringElement(cv2.MORPH_CROSS,(N, N-1)), iterations=iterations)
+        #dilated_image       = cv2.dilate(ary / 255, cv2.getStructuringElement(cv2.MORPH_CROSS,(5,1)), iterations=iterations)
+        #kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(3,3))
 
+
+        dilated_image       = cv2.dilate(ary / 255, kernel, iterations=iterations)
+        
     else:
         kernel              = np.zeros((N,N), dtype=np.uint8)
         kernel[(N-1)/2,:]   = 1
@@ -235,13 +233,31 @@ def find_components(edges, max_components, horizontal):
             contours, hierarchy = cv2.findContours(dilated_image, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
             prev_count          = count
             count               = len(contours)
+        
+        #Image.fromarray(edges).show()
+        #Image.fromarray(255 * dilated_image).show()
 
     else:
+        #Dilate only individual letters
+        #Goal: Extract lines instead of horizontal lines
+        #Nearest neighbor???
+
+        #dilated_image = edges
+
         n                       = max_components
         dilated_image           = dilate(horizontal, edges, N=3, iterations=n)
-        contours, hierarchy     = cv2.findContours(dilated_image, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        
+        #gray_blur = cv2.GaussianBlur(edges, (15, 15), 0)
+        #thresh = cv2.adaptiveThreshold(gray_blur, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 11, 1)
+        #kernel = np.ones((3, 3), np.uint8)
+        #kernel = cv2.getStructuringElement(cv2.MORPH_CROSS,(3,3))
+        #dilated_image = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel, iterations=4)
+
+        contours, hierarchy     = cv2.findContours(dilated_image, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE) #cv2.findContours(dilated_image, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         count                   = len(contours)
 
+        #Image.fromarray(edges).show()
+        #Image.fromarray(255 * dilated_image).show()
     #Image.fromarray(edges).show()
     #Image.fromarray(255 * dilated_image).show()
 
@@ -287,17 +303,42 @@ def find_border_components(contours, ary):
     return borders
 
 
-def extract_edges(im):
+def extract_line_edges(im):
     # Dilate image _before_ finding a border. Otherwise the edge detection algorithm would lose tips of letters
     # Pokemon image extracting technique of finding borders: http://www.pyimagesearch.com/2014/04/21/building-pokedex-python-finding-game-boy-screen-step-4-6/
-    #im = np.asarray(im[:,:])
-    #Image.fromarray(im).show()
-    #print im.shape
-    #im.show()
-    im                  = cv2.cvtColor(np.asarray(im), cv2.COLOR_BGR2GRAY)
-    #print 'done grayscale'
+    
+    #im                  = cv2.cvtColor(np.asarray(im), cv2.COLOR_BGR2GRAY)
+    #im                  = cv2.bilateralFilter(np.asarray(im), 11, 17, 17)
+
+    edges               = cv2.Canny(np.asarray(im), 50, 100)
+
+    contours, hierarchy = cv2.findContours(edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    borders             = find_border_components(contours, edges)
+
+    borders.sort(key=lambda (i, x1, y1, x2, y2): (x2 - x1) * (y2 - y1))
+
+    border_contour      = None
+    if  len(borders):
+        border_contour  = contours[borders[0][0]]
+        edges           = remove_border(border_contour, edges)
+
+    edges = 255 * (edges > 0).astype(np.uint8)
+
+    return edges   
+
+
+def extract_text_area_edges(im):
+    # print "extract_text_area_edges"
+    # Dilate image _before_ finding a border. Otherwise the edge detection algorithm would lose tips of letters
+    # Pokemon image extracting technique of finding borders: http://www.pyimagesearch.com/2014/04/21/building-pokedex-python-finding-game-boy-screen-step-4-6/
+    #print im
+    #imarray = np.array(im.getdata()).reshape(im.size[0], im.size[1], 3)
+    im                  = cv2.cvtColor(np.asarray(im), cv2.COLOR_BGR2GRAY)#cv2.cvtColor(imarray, cv2.COLOR_BGR2GRAY)
+    # print "in edges"
     im                  = cv2.bilateralFilter(np.asarray(im), 11, 17, 17)
     edges               = cv2.Canny(np.asarray(im), 50, 100)
+
+
 
     contours, hierarchy = cv2.findContours(edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     borders             = find_border_components(contours, edges)
@@ -313,12 +354,28 @@ def extract_edges(im):
 
     # Remove ~1px borders using a rank filter. Rank filter should be used when there are noises in the images.
     # Rank filter simply reduces pixels based on neighbors, thus pinpointing actual text from noise.
-    #maxed_rows  = rank_filter(edges, -4, size=(1, 20))
-    #maxed_cols  = rank_filter(edges, -4, size=(20, 1))
-    #debordered  = np.minimum(np.minimum(edges, maxed_rows), maxed_cols)
-    #edges       = debordered
+    # Including rank filter helps differentiate a one pixel length gap between lines. 
+    # Not including rank filter helps keep the tip's of letters together and thus not cropped.
+    # Thus we keep the rank filter for text area dilation because we want to gethr the smallest possible text areas
+    maxed_rows  = rank_filter(edges, -4, size=(1, 20))
+    maxed_cols  = rank_filter(edges, -4, size=(20, 1))
+    debordered  = np.minimum(np.minimum(edges, maxed_rows), maxed_cols)
+    edges       = debordered
 
     return edges
+ 
+
+def extract_text_area(im):
+    #print 'extract_text_area'
+    edges               = extract_text_area_edges(im)
+
+    # Find contours of text areas and dilate in all directions in order to get areas of text
+    horizontal          = False 
+    max_num_text_areas  = 10    # Dummy value
+    contours            = find_components(edges, max_num_text_areas, horizontal)
+
+
+    return edges, contours
 
 
 def downscale_image(im, max_dim=2048):
@@ -338,44 +395,38 @@ def downscale_image(im, max_dim=2048):
 def process_image(path, out_path):
     original_im = Image.open(path)
     scale, im   = downscale_image(original_im)
-    edges       = extract_edges(im)
-    
-    # Find contours of text areas
-    # Dilate in all directions in order to get areas of text
-    horizontal  = False 
-    
-    ''' Note:
-        Defining the max_num_text_areas is tricky but important. It decides when dilation is done and defines whether columns
-        on a research paper will be extracted properly.
-        If max_num_text_areas is 10, then the dilation will work properly on a reserach paper but not a resume.
-        If the max_num_text_areas is 5, then the dilation will work on a resume but not a reserch paper, because a research paper
-        has more text than that (maybe like 8 to be exact). 
-        In cases where the max_num_text_areas is larger than the actual number of text_areas, then the dilation repeats itself
-        forever; see find_components(). So we simply check for an infinite loop, and pass a dummy value for max_nam_text_areas instead.
-    '''
-    max_num_text_areas  = 10
-    contours            = find_components(edges, max_num_text_areas, horizontal)
 
+    # print "begin parse"
+
+    # Continuously extract text areas
+    edges, contours = extract_text_area(im)
     if len(contours) == 0:
         return  
 
+    # print "done extracting text areas"  
+      
     document_structure  = list()
     c_info              = props_for_contours(contours, edges)
     c_info.sort(key=lambda x: x['y1'])
+
+    # print "done contouring"  
 
     # Cropping per line on a text_area and find the contours of each line
     for c in c_info:
         text_area_crop          = c['x1'], c['y1'], c['x2'], c['y2']
         text_area               = im.crop(text_area_crop)
-        text_area_edges         = extract_edges(text_area)
+        text_area_edges         = extract_line_edges(text_area)  #extract_edges(text_area)
         horizontal_length       = text_area.size[0]
+
+        # print "done extracting a line"  
+
 
         # We will dilate horizontally instead of horizontally and vertically
         horizontal              = True 
         text_area_contours      = find_components(text_area_edges, horizontal_length, horizontal)
 
         if len(text_area_contours) != 0:
-            #draw.rectangle(this_crop, outline='blue')
+            # draw.rectangle(this_crop, outline='blue')
             
             # For each text area divide it by lines
             page_lines          = crop_per_line(text_area, text_area_contours, text_area_edges)

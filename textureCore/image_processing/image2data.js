@@ -25,7 +25,14 @@ var ocr             = require('./ocr');
 var ocr_path        = 'ocr/';
 var doc_struct_dir  = 'document_structure/';
 
-imagedocuments2structure(['img/worthy0.png', 'img/worthy1.png'], true)
+//imagemagick.pdf2image("test_cases/nagy.pdf","test_cases/nagy.pdf.png")
+//imagedocuments2structure(['img/vegemite.pdf-0.png'], true)
+//imagedocuments2structure(['img/nagy-1.png'], true) //(['test_cases/nagy.pdf-1.png'], true)
+//imagedocuments2structure(['img/nagy-1BW.png'], true)
+//imagedocuments2structure(['img/michael1-ver2.png'], true)
+//imagedocuments2structure(['img/miller0.png'], true)
+imagedocuments2structure(['img/patricia0.png'], true)
+/*.then(imagedocuments2structure(['img/worthy0.png', 'img/worthy1.png'], true))
 .then(imagedocuments2structure(['img/miller0.png', 'img/miller1.png'], true))
 .then(imagedocuments2structure(['img/patricia0.png', 'img/patricia1.png'], true))
 .then(imagedocuments2structure(['img/ravi0.png', 'img/ravi1.png'], true))
@@ -70,6 +77,7 @@ function imagedocuments2structure(arr_files, isWriteToFile){
                             if(isWriteToFile){
                                                 miscutils.write_to_file(doc_struct_dir + out_file + '.json', JSON.stringify(document_stucture));
                             }
+
                             deferred.resolve(document_stucture);
 
                         });
@@ -122,6 +130,7 @@ function imageprocess_page(page_number, pathyfilename, filename, image_ext){
                 miscutils.logMessage(JSON.stringify(org_doc_struct), 1);
             }catch(err){
                 miscutils.logMessage('Reading from stdout err:' + err, 1);
+                miscutils.logMessage('Reading from stdout err:' + data, 1);
             }
         });
 
@@ -131,6 +140,12 @@ function imageprocess_page(page_number, pathyfilename, filename, image_ext){
 
         child.on('close', function(code){
             miscutils.logMessage('closing code for exec python:' + code, 1);
+
+            //Sort the array of groups by the first line's line_number'
+            org_doc_struct = _.sortBy(org_doc_struct, function(grouparr) {
+                return parseInt(grouparr.group[0].line_number);
+            });
+
             deferred.resolve({
                 'page_number' :     page_number,
                 'page_content':     org_doc_struct

@@ -5,7 +5,6 @@ var regex = [];
 ********************************************************************************/
 var RegexGenerator = function(){
 	var _ = require('lodash');
-	var TokenSeq =  require("./TokenSeq.js") ;
  
 	//Format of character classes: C+ or [^C]+ or special token
 	//Character classes: Numeric digits, alphabet both lower and upper, lower case, upper case, accented alphabet, alphanumeric, whitespace character, all character 
@@ -25,8 +24,9 @@ var RegexGenerator = function(){
 
 				function doPermute(input, output, used, size, level) {
 					if (size == level) {
-						var word = new TokenSeq(JSON.parse(JSON.stringify(output)));
-						results.push(word);
+						var word = output.slice();
+						results.push(word)
+
 						return;
 					}
 					level++;
@@ -58,14 +58,18 @@ var RegexGenerator = function(){
 			var permutations2 = permutate.getPermutations(allTokens, 2);
 			var permutations3 = permutate.getPermutations(allTokens, 3);
 
-			formRegexPatt(permutations1)
-			formRegexPatt(permutations2)
-			formRegexPatt(permutations3)
+			//formRegexPatt(permutations1)
+			//formRegexPatt(permutations2)
+			//formRegexPatt(permutations3)
+			regex = regex.concat(permutations1)
+			regex = regex.concat(permutations2)
+			regex = regex.concat(permutations3)
 
 			//Shave the duplicates off
 			regex = _.uniq(regex);
+
 		}
-		return regex
+		return regex;
 	};
 	//Adds patterns regex to regex[]
 	function formRegexPatt(combo){

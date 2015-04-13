@@ -22,10 +22,7 @@ function logMessage(message, msgDebugLevel){
 	}
 	loggedMessages.push((message));
 }
-<<<<<<< Updated upstream
 
-=======
->>>>>>> Stashed changes
 exports.logMessage = logMessage;
 
 
@@ -40,8 +37,7 @@ function fs_readFile (file, encoding) {
     return deferred.promise 							// the promise is returned
 }
 exports.fs_readFile = fs_readFile;
-<<<<<<< Updated upstream
-=======
+
 
 
 function write_to_file(out_file, content){
@@ -55,4 +51,3 @@ function write_to_file(out_file, content){
 }
 exports.write_to_file = write_to_file;
 
->>>>>>> Stashed changes
