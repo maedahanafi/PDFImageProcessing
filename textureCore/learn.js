@@ -94,15 +94,23 @@ function beginLearn(highlights){
 	//Learn executables!!!!!
 	//1. Learn regex executables, return [executable1, executable2], 
 	//where executable = {function:regex, function_params:[   ]}
-	learnRegex(highlights.highlights)
+	var applicable_regex = [];
+	var regex_promise 	 = learnRegex(highlights.highlights).then(function(result){
+		applicable_regex = result;
+	});
 
-	//2. Learn inDict executables, return [executable1, executable2, ],
-	//where executable = {}
-	.then(learnIsEntity(highlights.highlights))
-
-	//3. Learn isEntityType = {}
-	//where executable = {}
+	//2. Learn isEntityType = {}
+	var applicable_entity 	= [];
+	var entity_promise 		= learnIsEntity(highlights.highlights).then(function(result){
+		applicable_entity 	= result;
+	});
 	
+	//3. Learn inDict executables, return [executable1, executable2, ],
+	var applicable_dict 	= [];
+	var dict_promise 		= learnInDict(highlights.highlights).then(function(result){
+		applicable_dict 	= result;
+	});
+
 	//4. Produce permutations of executables here [boxtype, optype] 
 	//e.g. [{function:from,}, {function:regex1}], [{function:from,}, {function:regex2}], [{function:from,}, {function:inDict}]
 
@@ -145,8 +153,7 @@ function beginLearn(highlights){
  	for(var k = 0; k < regex.length ; k++){ 						// For loop through each regex in regex[]
  		var regex_elem 	= regex[k]; 
 	 	var promise 	= check_regex_applicable(regex_elem, highlights)
-	 	regex_check_promises.push(promise)	 						// Collect promises
-
+	 	regex_check_promises.push(promise);	 						// Collect promises
  	}
 
  	Q.all(regex_check_promises).then(function(applicable_regex){
@@ -164,8 +171,8 @@ function beginLearn(highlights){
  }
 
 /*
-	@regex_elem is the regex to check the @highlights, an array, againts
-	@returns a promise to do it
+	@regex_elem is the regex to check the @highlights, an array, 
+	@returns a promise to do it, where the promise is to return the regex if it is applicable to the set of higlights
 */
 function check_regex_applicable(regex_elem, highlights){
 	var Q 				= require('Q');
@@ -180,7 +187,7 @@ function check_regex_applicable(regex_elem, highlights){
 		
 		miscutils.logMessage("Regex learner. regex: " + regex_elem + ", check in line: " + highlight_obj.text, 2);
 		var promise = executor.extract( highlight_obj.file, highlight_obj.file_contents, executable );
- 		regex_promises.push(promise)
+ 		regex_promises.push(promise);
  	}
  	
  	Q.all(regex_promises).then( function(all_matches){					// all_matches contains an array of match() results, e.g. [["text_match", ...], null, [...], etc]
@@ -189,75 +196,79 @@ function check_regex_applicable(regex_elem, highlights){
  		var add_flag = true;
  		for(var t=0; t<all_matches.length; t++){
  			var match_res 		= all_matches[t];
- 			var orig_highlight 	= highlights[t].text
+ 			var orig_highlight 	= highlights[t].text;
 
- 			if(match_res == null || match_res[0] != orig_highlight){	//Check if the extracted equals the original highlight
+ 			if(match_res == null || match_res[0] != orig_highlight){	// Check if the extracted equals the original highlight
 				add_flag = false;
 				break;
  			}
  		}
  		if(add_flag){
- 			miscutils.logMessage("Regex: " + regex_elem + " matches: " + all_matches, 2)
+ 			miscutils.logMessage("Regex: " + regex_elem + " matches: " + all_matches, 2);
  			deferred.resolve(regex_elem);
  		}else{
- 			deferred.resolve(-1);
+ 			deferred.resolve(-1);	// Return a -1 to indicate that the regex doesn't describe the set of highlights
  		}
  	})
- 	return deferred.promise
+ 	return deferred.promise;
 }
 
 /*
-	@highlights takes in a list of highlighted text and learns NER associations for each line
+	@highlights takes in a list of highlighted text and learns NER associations that are applicable to @highlights
 
 	This learn function takes in a list of highlights that the Is operator must be able to extract e.g. [“Maeda”, “Aisya”]. 
 	The output is an array of applicable entity types e.g. [“Person”], where an entity type is applicable when it identifies each of the elements in the list of highlights.
 */
 function learnIsEntity(highlights){
+	var Q 			 = require('Q');
+ 	var deferred   	 = Q.defer();
 
- 	getNER(highlights).then(function(entities){
- 		console.log(entities)
+ 	getNER(highlights).then(function(entities){							// entities is a 2D array: [[{Person, ...}, ], [{Person}, ...], ...]
  		// Check if all the highlights match all the entities
  		// Given entities [{entity, word}, {entity, word}, ....]
  		// Given highlights [{highlight}, {highlight}, ....]
  		// Check if each highlight exists in entities
- 		// 
- 		var flatten_entities = _.flatten(entities);
- 		miscutils.logMessage("Flatten:", 1)
- 		miscutils.logMessage(flatten_entities, 1)
- 		// Group the flattened array by the entity
- 		var grouped_entities = _.groupBy(flatten_entities, function(entity) {
+
+ 		var flatten_entities = _.flatten(entities);						// flatten_entities is an array: [{Person, ...}, {Person, ...}, ...]
+
+ 		var grouped_entities = _.groupBy(flatten_entities, function(entity) {  		// Group the flattened array by the entity
 			return entity.type;
-		}); // grouped_entities = {Person:[], Building:[], ...}
+		}); 															// grouped_entities = {Person:[], Building:[], ...}
 		
 		var applicable_entities = [];									// Entities that are applicable on the given highlights
 		for(var key in grouped_entities){								// Loop through each group and for each entity group, check if each highlight exists
-			var entity_group = grouped_entities[key];					// Check if each highlight exists within entity_group
-			var text_highlight = _.pluck(highlights, 'text');			// An array of only the highlight's text that belong to this entity e.g. ['Ravi Amon', 'Chris Sample']
-			var text_entity_group = _.pluck(entity_group, 'text');		// An array of only the NER texts that that belong to this entity e.g. ['Ravi Amon', 'Chris']
-			miscutils.logMessage(text_entity_group, 1)
-			miscutils.logMessage(text_highlight, 1)
-			if (text_highlight){	// If the highlight array is equal to the entity's text array, then 
-
+			var entity_group 		= grouped_entities[key];			// Check if each highlight exists within entity_group
+			var text_highlight 		= _.pluck(highlights,   'text');	// An array of only the highlight's text that belong to this entity e.g. ['Ravi Amon', 'Chris Sample']
+			var text_entity_group 	= _.pluck(entity_group, 'text');	// An array of only the NER texts that that belong to this entity e.g. ['Ravi Amon', 'Chris']
+			miscutils.logMessage("Check if Entities extracted equals highlights: ", 1);
+			miscutils.logMessage(text_entity_group, 1);
+			miscutils.logMessage(text_highlight, 	1);
+			if (_.isEqual(text_highlight, text_entity_group)){			// If the highlight array is equal to the entity's text array, then 
+				applicable_entities.push(key);
 			}
 		}
+		miscutils.logMessage("Entities Match: ", 	1);
+		miscutils.logMessage(applicable_entities, 	1);
+		deferred.resolve(applicable_entities);
 
-
- 		// Then, collect and count all the entities 
- 		var freq = []	// An elem in freq e.g. {entity:"Person", frequency:1}
- 		for(var i=0; i<entities.length; i++){
-
- 		}
  	});
-
-
-
- 	
+	return deferred.promise; 	
  }
 
+/*
+	@highlights takes in a list of highlighted text and learns dictionaries that are applicable to @highlights
+	
+	The basic algorithm is a for loop for each dictionary. 
+	For each dictionary, apply each dictionary rule to each highlight. 
+	If each each dictionary rule is applicable to each highlight from the set of highlights, 
+	then return the set of applicable operators.  
+	Essentially the output is an array of dictionaries that are applicable to each highlight e.g. [name_dictionary] 
+	is the output for the input [“Maeda”, “Aisya”].
 
- function learnInDict(){
+*/
+function learnInDict(highlights){
 
- }
+}
 
 
 /*
