@@ -108,37 +108,42 @@ function beginLearn(highlights, dictionaries){
 	// invalid.
 	miscutils.logMessage('Begin Learning', 1);
  	var Q 					= require('Q');
-	var applicable_regex 	= [];
-	var applicable_entity 	= [];
-	var applicable_dict 	= [];
+ 	// A partial executable is an element in an executable. It is in obj form e.g. {function, function_params}, 
+ 	// without the string to operate on added to the function_params.
+	var valid_partial_exec 	= []; 
 	var promises 			= [];
 	//Learn executables!!!!!
-	//1. Learn regex executables, return [executable1, executable2], 
-	//where executable = {function:regex, function_params:[   ]}
-	var regex_promise 	 = learnRegex(highlights.highlights)/*.then(function(result){
-		applicable_regex = result;
-		console.log(result)
-	});*/
-	promises.push(regex_promise)
+	var regex_promise 		= learnRegex(highlights.highlights);				//1. Learn regex 
+	promises.push(regex_promise);
 
-	//2. Learn isEntityType = {}
-	var entity_promise 		= learnIsEntity(highlights.highlights)/*.then(function(result){
-		applicable_entity 	= result;
-		console.log(result)
-	});*/
-	promises.push(entity_promise)
+	var entity_promise 		= learnIsEntity(highlights.highlights);				//2. Learn isEntityType = {}
+	promises.push(entity_promise);
 
-	//3. Learn inDict executables, return [executable1, executable2, ],
-	var dict_promise 		= learnInDict(highlights.highlights, dictionaries)/*.then(function(result){
-		applicable_dict 	= result;
-		console.log(result)
-	});*/
-	promises.push(dict_promise)
-	Q.all(promises).then(function(results){	// An array of results e.g. [result of regex learn, result of entity learn, result of dictionary learn]
-		// Create executables for each result
-		// Create regex executables
+	var dict_promise 		= learnInDict(highlights.highlights, dictionaries); //3. Learn inDict 
+	promises.push(dict_promise);
+
+	Q.all(promises).then(function(results){										// An array of results e.g. [result of regex learn, result of entity learn, result of dictionary learn]
+		// Create a partial executable for each element in result
+		// Create partial regex executables (only in obj form and not in array form)
+		var regex_arr = results[0];
+		for(var i=0; i<regex_arr.length; i++){
+			var regex_string = regex_arr[i];
+			valid_partial_exec.push({'function':'regular_expression'  , 'function_param': [ regex_string, ""]});
+		}
+														
 		// Create entity executables
+		var entity_arr = results[1];
+		for(var i=0; i<entity_arr.length; i++){
+			var entity_type = entity_arr[i];
+			valid_partial_exec.push({'function':'is'  , 'function_param': [ entity_type]});
+		}
+
 		// Create dictionary executables
+		var dictionary_arr = results[2];
+		for(var i=0; i<dictionary_arr.length; i++){
+			var dict = dictionary_arr[i];
+			valid_partial_exec.push({'function':'in'  , 'function_param': [ dict.name, dict.content]});
+		}
 	});
 
 
@@ -194,7 +199,7 @@ function learnBoxes(highlights){
 	 	applicable_regex = _.reject(applicable_regex, function(n) {
 			return n == -1;
 		});
-	 	miscutils.logMessage("Array of applicable regex: ", 					1);
+	 	miscutils.logMessage("Array of applicable regex: ", 					2);
 	 	miscutils.logMessage(applicable_regex, 									2);
 	 	miscutils.logMessage("Applicable regexes:" + applicable_regex.length, 	1);
 
@@ -216,7 +221,7 @@ function check_regex_applicable(regex_elem, highlights){
  	for(var l = 0; l < highlights.length; l++){ 						// For loop through each highlight
  		var highlight_obj 	= highlights[l];
  		var executable 		= [ 										// Create an executable capable of testing whether the text can be extracted from the line with regex
-								{'function':'regular_expression'  , 'function_param': [ regex_elem, "", highlight_obj.text ]}												// is params: [ regex]
+								{'function':'regular_expression'  , 'function_param': [ regex_elem, "", highlight_obj.text ]}												
 							];
 		
 		miscutils.logMessage("Regex learner. regex: " + regex_elem + ", check in line: " + highlight_obj.text, 2);
@@ -274,16 +279,16 @@ function learnIsEntity(highlights){
 			var text_highlight 		= _.pluck(highlights,   'text');	// An array of only the highlight's text that belong to this entity e.g. ['Ravi Amon', 'Chris Sample']
 			var text_entity_group 	= _.pluck(entity_group, 'text');	// An array of only the NER texts that that belong to this entity e.g. ['Ravi Amon', 'Chris']
 			
-			miscutils.logMessage("Check if Entities extracted equals highlights: ", 1);
-			miscutils.logMessage(text_entity_group, 1);
-			miscutils.logMessage(text_highlight, 	1);
+			miscutils.logMessage("Check if Entities extracted equals highlights: ", 2);
+			miscutils.logMessage(text_entity_group, 								2);
+			miscutils.logMessage(text_highlight, 									2);
 			
 			if (_.isEqual(text_highlight, text_entity_group)){			// If the highlight array is equal to the entity's text array, then 
 				applicable_entities.push(key);
 			}
 		}
-		miscutils.logMessage("Entities Match: ", 	1);
-		miscutils.logMessage(applicable_entities, 	1);
+		miscutils.logMessage("Applicable Entities: ", 	1);
+		miscutils.logMessage(applicable_entities, 		1);
 		deferred.resolve(applicable_entities);
 
  	});
@@ -292,9 +297,7 @@ function learnIsEntity(highlights){
 
 /*
 	@highlights takes in a list of highlighted text and learns dictionaries that are applicable to @highlights
-	@dictionaries is a list of dictionaries
-
-
+	@dictionaries is a list of dictionaries, see above for format of dictionary
 */
 function learnInDict(highlights, dictionaries){
 	var Q 			 	= require('Q');
@@ -335,7 +338,7 @@ function is_applicable(text_highlight, dictionary){
 
  	// Q.all gets an array of booleans with each element corresponds to a highlight (whether it can be described by dictionary) e.g. [ true, true, true, false, true ]
  	Q.all(check_promises).then(function(results){								// If a false exists in results, then there exists a highlight which cannot be described by the dictionary
- 		miscutils.logMessage('Checking between dictionary ' + dictionary.name + ' and the ' + text_highlight.length + ' highlights:', 1)
+ 		miscutils.logMessage('Checking between elements in dictionary ' + dictionary.name + ' and elements in the ' + text_highlight.length + ' highlights:', 1)
 		miscutils.logMessage(results, 1);
 
  		var find_false = _.findIndex(results, function(bool_match) {
@@ -344,10 +347,10 @@ function is_applicable(text_highlight, dictionary){
 		if(find_false == -1 && results.length == text_highlight.length){	
 			// If a false doesn't exist (equals -1 meaning not found) and 
 			// the results is as many as the highlights, then we return the dictionary
-			miscutils.logMessage("Dictionary " + dictionary.name + " successfully describes the highlights", 1);
+			miscutils.logMessage("Dictionary " + dictionary.name + " successfully describes the highlights", 	1);
 	 		deferred.resolve(dictionary);
 		}else{																	// Otherwise the text_highlights cannot be described by the dictionary, thus return a -1
-			miscutils.logMessage("Dictionary " + dictionary.name + " fails to describe the highlights", 1);
+			miscutils.logMessage("Dictionary " + dictionary.name + " fails to describe the highlights", 		1);
 			deferred.resolve(-1);									
 		}
  	});
@@ -406,12 +409,12 @@ function is_dictionary_applicable(text, dictionary){
 
 	// Q.all would execute only rules of type entity and regex
 	Q.all(exec_promises).then(function(results){										// e.g. [ [ 'RICHARD', index: 0, input: 'RICHARD A. LEVINSON' ], [...] ]
-		miscutils.logMessage('Results of is dictionary applicable to '+ text + ':', 1);
-		miscutils.logMessage(results, 1);
+		miscutils.logMessage('Results of is dictionary applicable to '+ text + ':', 2);
+		miscutils.logMessage(results, 												2);
 
 		// If there exists a non null element in results, then there exist a rule that matches text
 		var non_nil_results = _.filter(results, function(res){return res != null});		// Filter out all nulls
-		miscutils.logMessage("Non null results:" + non_nil_results, 2);
+		miscutils.logMessage("Non null results:" + non_nil_results, 				2);
 		if(non_nil_results.length > 0 ){
 			// Check if the non_nill_results actually extract exactly the highlight text
 			// non_nil_results contains a mix of entity and regex matches e.g. [ [ 'JANE', index: 0, input: 'JANE M. SAMPLE' ], 'JANE M.' ]
@@ -430,9 +433,7 @@ function is_dictionary_applicable(text, dictionary){
 			deferred.resolve(is_text_describable);
 		}	
  	});
-	
 	return deferred.promise; 	
-
 }
 
 /*
@@ -463,7 +464,6 @@ function getNER(highlights){
 
     }, console.err);
  	return deferred.promise;
-
 }
 
 /*
@@ -486,9 +486,8 @@ function NER (totaltext ){
 			deferred.resolve(entities);
  		}
 	});
-
 	return deferred.promise; // The promise is returned
-};
+}
 
 /*
 ******************************************************************************************************************************
