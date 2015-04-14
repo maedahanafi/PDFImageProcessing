@@ -84,30 +84,43 @@ var name_highlights = {'highlights':
 							}*/
 						]
 					};
-
+// Dictionary assumed to be provided by the user
+var dictionaries = [	// This contains all dictionaties e.g. [{name:schools, content:[ {text} or {regex}, ... ]}]
+						{
+							'name'   :   'name_dictionary' , 
+							'content': [	
+								{"type":"text",  "content":"Maeda"}
+								,{"type":"regex", "content":["[A-Z\\.\\s]+", ""]}
+								,{"type":"entity",	 "content":"Person"}
+							]
+						}
+					];
 var BOXES = ['Line', 'Section', 'Page'];
 
 
-beginLearn(name_highlights)
-function beginLearn(highlights){
+/*
+******************************************************************************************************************************
+*/
+beginLearn(name_highlights, dictionaries)
+function beginLearn(highlights, dictionaries){
 	miscutils.logMessage('Begin Learning', 1);
+	var applicable_regex 	= [];
+	var applicable_entity 	= [];
+	var applicable_dict 	= [];
 	//Learn executables!!!!!
 	//1. Learn regex executables, return [executable1, executable2], 
 	//where executable = {function:regex, function_params:[   ]}
-	var applicable_regex = [];
-	var regex_promise 	 = learnRegex(highlights.highlights).then(function(result){
+	/*var regex_promise 	 = learnRegex(highlights.highlights).then(function(result){
 		applicable_regex = result;
 	});
 
 	//2. Learn isEntityType = {}
-	var applicable_entity 	= [];
 	var entity_promise 		= learnIsEntity(highlights.highlights).then(function(result){
 		applicable_entity 	= result;
-	});
+	});*/
 	
 	//3. Learn inDict executables, return [executable1, executable2, ],
-	var applicable_dict 	= [];
-	var dict_promise 		= learnInDict(highlights.highlights).then(function(result){
+	var dict_promise 		= learnInDict(highlights.highlights, dictionaries).then(function(result){
 		applicable_dict 	= result;
 	});
 
@@ -152,7 +165,7 @@ function beginLearn(highlights){
 	var regex_check_promises = [];									// The array that contains the promises on checking a regex against a set of highlights
  	for(var k = 0; k < regex.length ; k++){ 						// For loop through each regex in regex[]
  		var regex_elem 	= regex[k]; 
-	 	var promise 	= check_regex_applicable(regex_elem, highlights)
+	 	var promise 	= check_regex_applicable(regex_elem, highlights);
 	 	regex_check_promises.push(promise);	 						// Collect promises
  	}
 
@@ -207,7 +220,7 @@ function check_regex_applicable(regex_elem, highlights){
  			miscutils.logMessage("Regex: " + regex_elem + " matches: " + all_matches, 2);
  			deferred.resolve(regex_elem);
  		}else{
- 			deferred.resolve(-1);	// Return a -1 to indicate that the regex doesn't describe the set of highlights
+ 			deferred.resolve(-1);										// Return a -1 to indicate that the regex doesn't describe the set of highlights
  		}
  	})
  	return deferred.promise;
@@ -220,8 +233,8 @@ function check_regex_applicable(regex_elem, highlights){
 	The output is an array of applicable entity types e.g. [“Person”], where an entity type is applicable when it identifies each of the elements in the list of highlights.
 */
 function learnIsEntity(highlights){
-	var Q 			 = require('Q');
- 	var deferred   	 = Q.defer();
+	var Q 			= require('Q');
+ 	var deferred	= Q.defer();
 
  	getNER(highlights).then(function(entities){							// entities is a 2D array: [[{Person, ...}, ], [{Person}, ...], ...]
  		// Check if all the highlights match all the entities
@@ -230,7 +243,6 @@ function learnIsEntity(highlights){
  		// Check if each highlight exists in entities
 
  		var flatten_entities = _.flatten(entities);						// flatten_entities is an array: [{Person, ...}, {Person, ...}, ...]
-
  		var grouped_entities = _.groupBy(flatten_entities, function(entity) {  		// Group the flattened array by the entity
 			return entity.type;
 		}); 															// grouped_entities = {Person:[], Building:[], ...}
@@ -257,7 +269,8 @@ function learnIsEntity(highlights){
 
 /*
 	@highlights takes in a list of highlighted text and learns dictionaries that are applicable to @highlights
-	
+	@dictionaries is a list of dictionaries
+
 	The basic algorithm is a for loop for each dictionary. 
 	For each dictionary, apply each dictionary rule to each highlight. 
 	If each each dictionary rule is applicable to each highlight from the set of highlights, 
@@ -266,11 +279,184 @@ function learnIsEntity(highlights){
 	is the output for the input [“Maeda”, “Aisya”].
 
 */
-function learnInDict(highlights){
+function learnInDict(highlights, dictionaries){
+	var Q 			 	= require('Q');
+ 	var deferred   	 	= Q.defer();
+	var text_highlight 	= _.pluck(highlights,   'text');	// An array of only the highlight's text that belong to this entity e.g. ['Ravi Amon', 'Chris Sample']
+
+	var check_promises = [];
+ 	dictionaries.forEach(function(dictionary){					// dict_elem is {name:Schools, content:[{dict_entry}, ...]}
+ 		/*miscutils.logMessage("Checking if " + dict_elem.name + " is applicable.", 1);
+ 		// Iterate over each highlight
+		for(var i=0; i<text_highlight.length; i++){
+			var text = text_highlight[i];
+			// For each highlight, check if there exists an entry that is able to describe the highlight.
+	 		check_promises.push(is_dictionary_applicable(text, dict_elem));
+		}*/
+		check_promises.push(is_applicable(text_highlight, dictionary));
+ 	});
+ 	// Q.all gets an array of booleans with each element corresponds to a highlight (whether it can be described by)
+ 	Q.all(check_promises).then(function(results){
+ 		//console.log('final results of checking between dictionaries and highlights:',results);
+ 		//deferred.resolve(results);
+ 	});
+
+	return deferred.promise; 	
+}
+
+/*
+	@text_highlight is the array of highlights string e.g. ['Maeda', "Ravi"]
+	@dictionary is a dictionary e.g. {name:Schools, content:[{dict_entry}, ...]}
+
+	@return -1 if the dictionary cannot describe the set of highlights
+*/
+function is_applicable(text_highlight, dictionary){
+	var Q 			 	= require('Q');
+ 	var deferred   	 	= Q.defer();
+
+	var check_promises = [];
+	// Iterate over each highlight
+	for(var i=0; i<text_highlight.length; i++){
+		var text = text_highlight[i];
+		// For each highlight, check if there exists an entry that is able to describe the highlight.
+ 		check_promises.push(is_dictionary_applicable(text, dictionary));
+	}
+
+ 	// Q.all gets an array of booleans with each element corresponds to a highlight (whether it can be described by dictionary) e.g. [ true, true, true, false, true ]
+ 	Q.all(check_promises).then(function(results){	// If a false exists in results, then there exists a highlight which cannot be described by the dictionary
+ 		miscutils.logMessage('Checking between dictionary '+dictionary.name+' and the ' + text_highlight.length + ' highlights:', 1)
+		miscutils.logMessage(results, 1);
+
+ 		var find_false = _.findIndex(results, function(bool_match) {
+			return !bool_match;
+		});
+		if(find_false == -1 && results.length == text_highlight.length){	
+			// If a false doesn't exist (equals -1 meaning not found) and 
+			// the results is as many as the highlights, then we return the dictionary
+			miscutils.logMessage("Dictionary "+dictionary.name+ " successfully describes the highlights", 1);
+	 		deferred.resolve(results);
+		}else{	// Otherwise the text_highlights cannot be described by the dictionary, thus return a -1
+			miscutils.logMessage("Dictionary "+dictionary.name+ " fails to describe the highlights", 1);
+			deferred.resolve(-1);									
+		}
+ 	});
+
+	return deferred.promise; 	
+
+}
+/*
+	@text: Check if there exists a rule that applies to the text
+	@dictionary is a dictionary {dictionary_name:School, dictionary_content:[...]} e.g. {name:Schools, content:[{dict_entry}, ...]}
+	@return a promise; promise returns a boolean 
+*/
+function is_dictionary_applicable(text, dictionary){
+	var Q 			 		= require('Q');
+ 	var deferred   	 		= Q.defer();
+	var is_text_describable = false;
+	var exec_promises 		= [];
+	
+	for(var j=0; j<dictionary.content.length; j++){ 					// Iterate through each rule in the dictionary
+		//Create an executable for each rule to check 
+		var rule = dictionary.content[j];								// rule e.g. { type: 'text', content: 'Maeda' }
+		miscutils.logMessage("Check dictionary rule: " + rule.content + ", matches highlight: " + text, 1);
+
+		// A rule can be a regex, text, entity type
+		if( rule.type == 'regex' ){
+			// Construct an executable based on a regex
+			var executable = [
+				{'function'		 : 	'regular_expression'  , 
+				 'function_param': rule.content.concat([text])}			// regex params: [regex, regexflags, text]
+			];
+
+			// Execute it
+			var promise = executor.extract( "", "", executable );
+	 		exec_promises.push(promise);
+
+		}else if(rule.type == 'text'){													// The rule indicates the highlight must be an exact text match e.g. highlight = Maeda and rule's content = Maeda
+			if( _.isEqual(rule.content, text) ){ 										// Just check if the rule's content is equal to highlight's text
+				is_text_describable = true;
+				deferred.resolve(is_text_describable);									// Directly return the result, without executing exec_promises, as a result has been confirmed
+			}
+		}else if(rule.type == 'entity'){
+			// Construct an executable based on a entity
+			var executable = [
+				{'function'		 : 	'is'  , 
+				 'function_param': 	[rule.content].concat([text])}						// is params: [entity type, text], eg. ['Person', 'Maeda Fian']
+			];
+
+			// Execute it
+			var promise = executor.extract( "", "", executable );
+	 		exec_promises.push(promise);
+		}
+	}
+
+	// Q.all would execute only rules of type entity and regex
+	Q.all(exec_promises).then(function(results){										// e.g. [ [ 'RICHARD', index: 0, input: 'RICHARD A. LEVINSON' ], [...] ]
+		miscutils.logMessage('Results of is dictionary applicable to '+ text+':', 1);
+		miscutils.logMessage(results, 1);
+
+		// If there exists a non null element in results, then there exist a rule that matches text
+		var non_nil_results = _.filter(results, function(res){return res != null});		// Filter out all nulls
+		miscutils.logMessage("Non null results:" + non_nil_results, 2);
+		if(non_nil_results.length > 0 ){
+			// Check if the non_nill_results actually extract exactly the highlight text
+			// non_nil_results contains a mix of entity and regex matches e.g. [ [ 'JANE', index: 0, input: 'JANE M. SAMPLE' ], 'JANE M.' ]
+			// Entity rules results in string and regex matches results in arrays
+			
+			var find = _.find(non_nil_results, function(a_res){							// Find if there exists an element that matches fully the highlights
+				if( _.isArray(a_res) && _.isEqual(a_res[0], text)){						// A regex match is an array
+					is_text_describable = true;
+				}else if( _.isString(a_res) && _.isEqual(a_res, text)){					// An entity match is a string match
+					is_text_describable = true;
+				}
+			});		
+			
+			deferred.resolve(is_text_describable);
+		}else{
+			deferred.resolve(is_text_describable);
+		}	
+ 	});
+	
+	return deferred.promise; 	
 
 }
 
+/*var Q 			 		= require('Q');
+ 	var deferred   	 		= Q.defer();
+ 	var executor_promises 	= [];
+	// Iterate over each highlight
+	text_highlight.forEach(function(text_elem){
+		// Construct an executable based on a dictionary
+		var executable = [
+			{'function'		 : 	'in'  , 
+			 'function_param': [dictionary.name, dictionary.content, text_elem ]}// in params: [dict name, dict_array]
+		];
+		// Execute all possible pairs consisting of highlights and dictionaries
+		var promise = executor.extract( "",  "", executable );
+		executor_promises.push(promise);
+	});
+	Q.all(executor_promises).then(function(results){
+		var is_dict_applicable = false;
+		console.log(results)
+		deferred.resolve(is_dict_applicable);
+	});
+	return deferred.promise; */	
+/*var dict_rules = dict_elem.content;
+dict_rules.forEach(function(rule){			// Iterate over each rule
+	//
+	// Construct an executable based on rule
+	var highlight_obj 	= highlights[l];
+	var executable 		= [ 										// Create an executable capable of testing whether the text can be extracted from the line with regex
+						{'function':'regular_expression'  , 'function_param': [ regex_elem, "", highlight_obj.text ]}												// is params: [ regex]
+					];
 
+miscutils.logMessage("Regex learner. regex: " + regex_elem + ", check in line: " + highlight_obj.text, 2);
+var promise = executor.extract( highlight_obj.file, highlight_obj.file_contents, executable );
+	regex_promises.push(promise);
+});*/
+/*
+******************************************************************************************************************************
+*/
 /*
 	@highlights from image2data.js e.g. array of groups; a group is an array of lines
 	
@@ -323,6 +509,9 @@ function NER (totaltext ){
 	return deferred.promise; // The promise is returned
 };
 
+/*
+******************************************************************************************************************************
+*/
 /*
 	And when grabbing the highlight text from the image via interface, we must also figure 	
 	out which line the highlight is from. The highlighted text should be indicated within the 
