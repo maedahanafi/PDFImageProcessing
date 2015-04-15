@@ -11,6 +11,7 @@ var AlchemyAPI 		= require('alchemy-api');
 var alchemy 		= new AlchemyAPI(APIKey);
 
 var miscutils 		= require('./miscutils');
+var Combinatorics 	= require('./combinatorics.js').Combinatorics;
 var executor 		= require('./execute');
 var _ 				= require('lodash');
 
@@ -95,7 +96,14 @@ var dictionaries = [	// This contains all dictionaties e.g. [{name:schools, cont
 							]
 						}
 					];
-var BOXES = ['Line', 'Section', 'Page'];
+// The valid boxes we will learn. Should words be added too?
+//  highlight_type is the key to find information on the box_type within the highlight structure
+var BOXES = [
+				{'box_type':'Line', 	'highlight_type':'line_number'}, 
+				{'box_type':'Section', 	'highlight_type':'group_number'}, 
+				{'box_type':'Page', 	'highlight_type':'page_number'}
+			];
+
 
 
 /*
@@ -103,6 +111,11 @@ var BOXES = ['Line', 'Section', 'Page'];
 */
 beginLearn(name_highlights, dictionaries)
 function beginLearn(highlights, dictionaries){
+	// Read document structures first
+	highlights.highlights.forEach(function(elem){  							// Read the docstructure of the files
+ 		elem.file_contents = miscutils.fs_readFile(elem.file);
+ 	});
+
 	// Since we assume that the learning process will yield rules that are valid on ALL highlights and not just a subset of the highlights,
 	// the preceding step should involve figuring out which subset of highlights we should learn on, lest one of the highlights is
 	// invalid.
@@ -144,25 +157,102 @@ function beginLearn(highlights, dictionaries){
 			var dict = dictionary_arr[i];
 			valid_partial_exec.push({'function':'in'  , 'function_param': [ dict.name, dict.content]});
 		}
-	});
 
+		// Learn boxes that are applicable to the highlights.
+		var valid_from_partial = learnBoxes(highlights.highlights);
+
+		// Create all possible full executables from valid, valid_from_partial and valid_partial_exec
+		var possible_execs = Combinatorics.cartesianProduct(valid_from_partial, valid_partial_exec).toArray();
+		miscutils.logMessage("Number of possible executables:" + possible_execs.length, 1);
+		miscutils.logMessage("All possible executables:", 								2);
+		miscutils.logMessage(possible_execs, 											2);
+
+		// Filter for rules that don't extract the highlights
+		filterExecutables(possible_execs, highlights);
+
+	});
+	
 
 	//4. Produce permutations of executables here [boxtype, optype] 
 	//e.g. [{function:from,}, {function:regex1}], [{function:from,}, {function:regex2}], [{function:from,}, {function:inDict}]
 
-	// Learn boxes that are applicable to the highlights.
-
+	
 }
 
-function learnBoxes(highlights){
-	// All boxes are valid
-	// However, the n (and m) varies for each box.
+/* 
 
-	// For each possible box, learn a range from n to m that is valid for all highlights
+	Filter for rules that don't extract the highlights
+
+*/
+function filterExecutables(executables, highlights){
+	var filtered = [];
+	
+	for(var i=0; i<executables.length; i++){						// For each executable execute it on all document structures
+		var executable = executables[i];
+		console.log(executable)
+
+		testExecutable(executable, highlights);
+	}
+}
+
+/*
+	Given an @executable, test if it is valid for the @highlights
+
+*/
+function testExecutable(executable, highlights){
+	var promise 	= [];											// The array of promises of extraction execution
+	var Q 			= require('Q');
+ 	//var deferred   	= Q.defer();
+	for(var j=0; j<highlights.length; j++){							// Loop through the highlights
+		var highlight = highlights[j];
+		promise.push(executor.extract(highlight.file, highlight.file_contents, executable));
+	}
+	Q.all(promise).then( function(extraction_result){
+		console.log(extraction_result)	
+	})
+
 }
 /*
 ******************************************************************************************************************************
 */
+/*
+	@highlights is the array of highlights
+*/
+function learnBoxes(highlights){
+	var valid_from_statement = [];											// Partial executable statements for the from clause
+	// All boxes are valid
+	// However, the n (and m) varies for each box.
+	for(var i=0; i<BOXES.length; i++){ 										// For each possible box, learn a range from n to m that is valid for all highlights
+		var box_type = BOXES[i].box_type;
+		var n 	= 0, 														// Let n be the starting point in which a highlight appears. It is the minimum line_number, page_number, or group_number.
+			m 	= n; 														// Let m be the largest int in which a highlight appears
+		var key = BOXES[i].highlight_type;									// key is the key name that stores the location of the highlight e.g. key = 'line_number' if box_type = Line
+
+		var sorted = _.sortBy(highlights, function(highlight_elem) { 		// Sort the highlights based on where they are located in the doc structure
+			return highlight_elem[key];
+		});
+		miscutils.logMessage('Sorting by ' + key, 	1);
+		miscutils.logMessage(sorted, 				2);
+
+		n = sorted[0][key];
+		m = sorted[sorted.length - 1][key];
+		miscutils.logMessage('n: ' + n + ', m: ' + m, 1);
+		
+		// Line type can vary either as Title or Section, other than that the types for Page and Section such as Paragraph are just other ways of refferring to the exact same thing
+		if(box_type == 'Line' && n == 0 && m == 0){  						// If the n learned happens to be located at 0 and m is also 0, then simply call the line Title.
+			box_type = 'Title';	
+		}
+		var exec = {'function':'from', 'function_param': [box_type, n, m]};
+		valid_from_statement.push(exec);
+	}
+
+	miscutils.logMessage('Number of possible boxes:' + valid_from_statement.length, 1);
+	miscutils.logMessage('All possible boxes:', 	2);
+	miscutils.logMessage(valid_from_statement,  	2);
+
+	return valid_from_statement;
+}
+
 /*
  Given an array of highlights, produce all possible regular expressions that describe it.
  @returns is a promise; and the promise is to return an array of regular expressions 
@@ -184,9 +274,9 @@ function learnBoxes(highlights){
  	var Q 			= require('Q');
  	var deferred   	= Q.defer();
 
- 	highlights.forEach(function(elem){  							// Read the docstructure of the files
- 		elem.file_contents = miscutils.fs_readFile(elem.file);
- 	});
+ 	//highlights.forEach(function(elem){  							// Read the docstructure of the files
+ 	//	elem.file_contents = miscutils.fs_readFile(elem.file);
+ 	//});
 
 	var regex_check_promises = [];									// The array that contains the promises on checking a regex against a set of highlights
  	for(var k = 0; k < regex.length ; k++){ 						// For loop through each regex in regex[]

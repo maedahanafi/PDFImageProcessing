@@ -489,8 +489,8 @@ function NER(totaltext){
 		}else{
 			var entities = response.entities; 					// See http://www.alchemyapi.com/api/entity/htmlc.html for format of returned object
 
-			miscutils.logMessage("Processing the NER", 	1);
-			miscutils.logMessage(entities, 				1);
+			miscutils.logMessage("Processing the NER", 	2);
+			miscutils.logMessage(entities, 				2);
 			deferred.resolve(entities);
 		}
 	});
