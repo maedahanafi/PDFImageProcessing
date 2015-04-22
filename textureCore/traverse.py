@@ -59,7 +59,7 @@ def traverse(document_structure, box, n, m):
 
         for group_ctr in page_content:
             group    = group_ctr['group']
-            curr_box = 'Group'                                  # Set current box to Group
+            curr_box = 'Section'                                # Set current box to Section
 
             if isMatch(box, curr_box):
                 n_count+=1   

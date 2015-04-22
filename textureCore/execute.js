@@ -138,9 +138,10 @@ function extract(filename, document_structure, executables){
 			var op_string 	= _.reduce(string_arr, function(sum, string_elem){ return sum + string_elem });
 			var op_params 	= executables[i].function_param;						// Operator params e.g. [name_dictionary, etc]
 			op_params.push(op_string);  											// Append the string that the executable will be applied to. 
-
-			op_string = execute(op_string, executables, i);
-			deferred.resolve(op_string);
+ 
+ 			execute(op_string, executables, i).then(function(op_string){
+				deferred.resolve(op_string);
+			});
 		});
 	}else{	
 		// This case is normally used when the string to operate on has already been extracted e.g. a from statement doesn't exist,
@@ -149,9 +150,10 @@ function extract(filename, document_structure, executables){
 		// of the operators e.g. in, is, etc, such are the learning phase
 
 		var i 		   = 0;
-		var op_string  = executables[i].function_param[executables.length-1];		// The string to operate on, which in this case is already appended to the executable's function_param[]
-		var res_string = execute(op_string, executables, i);						// The string to operate on is already embedded within the executable
-		deferred.resolve(res_string);
+		var op_string  = executables[i].function_param[executables.length-1];			// The string to operate on, which in this case is already appended to the executable's function_param[]
+		execute(op_string, executables, i).then(function(res_string){ 					// The string to operate on is already embedded within the executable
+			deferred.resolve(res_string);
+		})						
 	}
 	
 	return deferred.promise;
@@ -168,6 +170,7 @@ exports.extract = extract;
 */
 
 function execute(op_string, executables, i){
+
 	// Assuming that executables.length == 1
 	var operator 	= executables[i].function; 								// Operator e.g. in
 	var op_params 	= executables[i].function_param;						// Operator params e.g. [name_dictionary, etc]
@@ -175,10 +178,17 @@ function execute(op_string, executables, i){
 	var Q           = require('Q');
     var deferred    = Q.defer();
 
+	// Validation check: op_string shouldn't be undefined
+	if( _.isUndefined(op_string) ){
+		return Q.fcall(function () {	// Return value using Q.fcall, otherwise function within then() will not be called
+		    return -1;
+		});
+	}
+
 	if ( _.isEqual(operator, "is") ){
 
 		isOp.apply(operator, op_params).then(function(data){
-			op_string = data;										// Execute operator and Assign a new op_string
+			op_string = data;												// Execute operator and Assign a new op_string
 			miscutils.logMessage("Finale result after executing " + operator, 	2)
 			miscutils.logMessage(op_string, 									2)
 			deferred.resolve(op_string);
@@ -188,7 +198,7 @@ function execute(op_string, executables, i){
 	}else if ( _.isEqual(operator, "in") ){
 		
 		inDict.apply(operator, op_params).then(function(data){
-			op_string = data;										// Execute operator and Assign a new op_string
+			op_string = data;												// Execute operator and Assign a new op_string
 			miscutils.logMessage("Finale result after executing " + operator, 	2)
 			miscutils.logMessage(op_string, 									2)
 			deferred.resolve(op_string);
@@ -197,7 +207,7 @@ function execute(op_string, executables, i){
 
 	}else if ( _.isEqual(operator, "regular_expression") ){
 
-		op_string = regular_expression.apply(operator, op_params);	// Execute operator and Assign a new op_string
+		op_string = regular_expression.apply(operator, op_params);			// Execute operator and Assign a new op_string
 		miscutils.logMessage("Finale result after executing " + operator, 		2)
 		miscutils.logMessage(op_string, 										2)
 		deferred.resolve(op_string);
@@ -304,12 +314,12 @@ function call_traverse(command){
     miscutils.logMessage("Python call for traverse: " + command, 1)
 
     child.stdout.on('data', function(data){             				// Data format is {data:[string, string, ...]}
-        miscutils.logMessage('Data from traverse: ' + data, 1);
+        miscutils.logMessage("Data from traverse: " + data, 1);
         result_data  	= JSON.parse(data).data;
     });
 
     child.stderr.on('data', function(data){
-        miscutils.logMessage('stderr:' + data, 1);
+        miscutils.logMessage("stderr:" + data, 1);
         deferred.reject(err)
     });
 

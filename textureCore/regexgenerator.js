@@ -5,7 +5,7 @@ var regex = [];
 ********************************************************************************/
 var RegexGenerator = function(){
 	var _ = require('lodash');
- 
+
 	//Format of character classes: C+ or [^C]+ or special token
 	//Character classes: Numeric digits, alphabet both lower and upper, lower case, upper case, accented alphabet, alphanumeric, whitespace character, all character 
 	var incCharCharacter = ["[0-9]+", "[a-zA-Z]+", "[a-z]+", "[A-Z]+", "[\\u00C0-\\u00FF]+", "[0-9a-zA-Z]+", "[\\s]+" ]
@@ -70,6 +70,7 @@ var RegexGenerator = function(){
 			regex = _.uniq(regex);
 
 		}
+		//miscutils.write_array_to_file('log/regex.txt', regex);
 		return regex;
 	};
 	//Adds patterns regex to regex[]

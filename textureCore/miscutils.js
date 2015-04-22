@@ -6,7 +6,7 @@ var _ = require('lodash');
 var isConsoleLog 	= true;
 //If you want to debug every single step, enter in 2. Otherwise enter in 1.
 //Make sure that isConsoleLog is true though
-var debugLevel 		= 1;
+var debugLevel 		= 2;
 
 /********************************************************************************
  Functions for logging run time
@@ -26,6 +26,12 @@ function logMessage(message, msgDebugLevel){
 exports.logMessage = logMessage;
 
 
+function saveLog(){
+	write_to_file('log/log.txt', JSON.stringify(loggedMessages));
+}
+exports.saveLog = saveLog;
+
+
 function fs_readFile (file, encoding) {
     var Q 			= require('Q'); 
     var deferred 	= Q.defer();
@@ -39,6 +45,14 @@ function fs_readFile (file, encoding) {
 exports.fs_readFile = fs_readFile;
 
 
+function write_array_to_file(out_file, array){
+	var string 	= _.reduce(array, function(n, sum){
+		sum 	= sum + n + '\n';
+	});
+	write_to_file(out_file, string);
+}
+exports.write_array_to_file = write_array_to_file;
+
 
 function write_to_file(out_file, content){
 	var fs = require('fs');
@@ -51,3 +65,41 @@ function write_to_file(out_file, content){
 }
 exports.write_to_file = write_to_file;
 
+
+// Credits to http://blog.victorquinn.com/javascript-promise-while-loop
+// A while loop that is sequential and returns promises
+function promise_while(condition, action) {
+	var Q 		 = require('Q');
+    var resolver = Q.defer();
+    var results	 = [];
+    var loop = function() {
+        if (!condition()){ 
+        	//console.log('Break out of loop')
+        	return resolver.resolve(results);
+        }
+        return action()
+            	.then(function(result){
+			    	results.push(result);
+            		return Q.fcall(loop());
+            	})/*.catch(function(err){
+					console.log('err:'+err)
+					resolver.reject(err)
+				});*/
+    };
+
+    loop();
+    //process.nextTick(loop);
+
+    return resolver.promise;
+};
+exports.promise_while = promise_while;
+
+// Returns a boolean indicating whether inArr contains a null
+function isNullExist(inArr){
+	// Since even checking for nulls cannot be done while in the loop e.g. trying to get the contents of a slot that is null is not possible/error
+	var isNullExist = _.findKey(inArr, function(chr) {
+		return chr == null;
+	})
+	return isNullExist != -1;
+}
+exports.isNullExist = isNullExist;

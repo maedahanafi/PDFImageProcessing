@@ -2,8 +2,6 @@
 	Learn regex, inDict, isEntity operators.
 
 */
-var generator 		=  new require("./regexgenerator.js").RegexGenerator() ;
-var regex 			= generator.init();
 
 // AlchemyAPI API key
 var APIKey	 		= "37abd9121c9dc242fdd73073c0f68b935e6631a3";
@@ -14,6 +12,9 @@ var miscutils 		= require('./miscutils');
 var Combinatorics 	= require('./combinatorics.js').Combinatorics;
 var executor 		= require('./execute');
 var _ 				= require('lodash');
+
+var generator 		=  new require("./regexgenerator.js").RegexGenerator() ;
+var regex 			= generator.init();
 
 var pat_name 		= './image_processing/document_structure/patricia0.json';
 var patricia_doc	= miscutils.fs_readFile(pat_name);
@@ -111,10 +112,8 @@ var BOXES = [
 */
 beginLearn(name_highlights, dictionaries)
 function beginLearn(highlights, dictionaries){
-	// Read document structures first
-	highlights.highlights.forEach(function(elem){  							// Read the docstructure of the files
- 		elem.file_contents = miscutils.fs_readFile(elem.file);
- 	});
+	// Read the contents of files first
+	highlights.highlights = read_doc_structure(highlights.highlights)
 
 	// Since we assume that the learning process will yield rules that are valid on ALL highlights and not just a subset of the highlights,
 	// the preceding step should involve figuring out which subset of highlights we should learn on, lest one of the highlights is
@@ -136,6 +135,7 @@ function beginLearn(highlights, dictionaries){
 	promises.push(dict_promise);
 
 	Q.all(promises).then(function(results){										// An array of results e.g. [result of regex learn, result of entity learn, result of dictionary learn]
+
 		// Create a partial executable for each element in result
 		// Create partial regex executables (only in obj form and not in array form)
 		var regex_arr = results[0];
@@ -168,16 +168,17 @@ function beginLearn(highlights, dictionaries){
 		miscutils.logMessage(possible_execs, 											2);
 
 		// Filter for rules that don't extract the highlights
-		filterExecutables(possible_execs, highlights);
+		filterExecutables(possible_execs, highlights.highlights).then(miscutils.saveLog());
+
 
 	});
-	
 
 	//4. Produce permutations of executables here [boxtype, optype] 
 	//e.g. [{function:from,}, {function:regex1}], [{function:from,}, {function:regex2}], [{function:from,}, {function:inDict}]
-
+	
 	
 }
+
 
 /* 
 
@@ -185,32 +186,111 @@ function beginLearn(highlights, dictionaries){
 
 */
 function filterExecutables(executables, highlights){
-	var filtered = [];
+	var Q 			= require('Q');
+ 	var deferred   	= Q.defer();
 	
-	for(var i=0; i<executables.length; i++){						// For each executable execute it on all document structures
-		var executable = executables[i];
-		console.log(executable)
+ 	var i = 0; 
+ 	miscutils.promise_while(function(){ 									// Condition
+ 		return i < executables.length;
+ 	},function(){															// Action: For each executable execute it on all document structures
+ 		var executable = executables[i];
+ 		/*console.log("Action Loop")
+ 		console.log('@4')
+ 		console.log(i + " out of "+executables.length)*/
+ 		i++;
+ 		return isExecutableApplicable(executable, highlights);
+ 	}).then(function(results){												// After the loop executes, results will contain an array of al executables applicable to the highlights e.g. [{executable}, {executable}, etc]
+ 		miscutils.logMessage("Filtered executables " + results.length + ":", 1);
+ 		miscutils.logMessage(results)
+ 		deferred.resolve(results);
+ 	});
+ 	
 
-		testExecutable(executable, highlights);
-	}
 }
 
 /*
 	Given an @executable, test if it is valid for the @highlights
-
+	@returns a promise
 */
-function testExecutable(executable, highlights){
-	var promise 	= [];											// The array of promises of extraction execution
+function isExecutableApplicable(executable, highlights){
 	var Q 			= require('Q');
- 	//var deferred   	= Q.defer();
-	for(var j=0; j<highlights.length; j++){							// Loop through the highlights
-		var highlight = highlights[j];
-		promise.push(executor.extract(highlight.file, highlight.file_contents, executable));
-	}
-	Q.all(promise).then( function(extraction_result){
-		console.log(extraction_result)	
-	})
+ 	var deferred   	= Q.defer();
+	var j  			= 0;
+ 	miscutils.promise_while(function(){ 											// Condition
+ 		return j < highlights.length;
+ 	}, function(){																	// Action
+		
+		var highlight 		= highlights[j];
+		var file_contents 	= _.clone(highlight.file_contents, 				true);		
+		var this_exec		= _.clone(executable, 							true);		// Important! Clone the executable or else previous strings in the function params will be there
+ 		
+ 		miscutils.logMessage("Testing " + j + " out of " + highlights.length, 	2);
+ 		miscutils.logMessage(this_exec, 										2);
 
+		j++;
+		return executor.extract(highlight.file, file_contents, this_exec);
+ 	
+ 	}).then(function(results){														// After the loop executes, check if the executable is indeed applicable. results is an array that contains all the results of the executables. Each element at i in results[] corresponds to an executable on a document structure at i from highlights[]
+		
+		var expected_results = _.pluck(highlights,   'text');						// An array of only the highlight's text that belong to this entity e.g. ['Ravi Amon', 'Chris Sample']
+ 		miscutils.logMessage("Executable result for each document structure: ", 1);
+ 		miscutils.logMessage(results,											1);
+ 		miscutils.logMessage("Expected Results: ",								1);
+ 		miscutils.logMessage(expected_results, 									1);
+
+ 		if(miscutils.isNullExist(results)){											// If there exists a null in the results, then we return, since even checking for nulls cannot be done while in the loop below e.g. trying to get the contents of a slot that is null is not possible/error
+			miscutils.logMessage("Executable is not applicable", 	1);
+ 			deferred.resolve(-1);
+		}
+
+ 		var function_match_type = executable[executable.length - 1].function;		// This is the textual match's function type e.g. is, regular_expression, or in
+ 		var is_applic = true;
+ 		for(var i = 0; i < results.length; i++){									// Iterate through array, compare result[i] with expected_result[i]
+
+ 			if( _.isEqual(function_match_type, 'regular_expression') ){				// Read the results as a regular expression result
+
+ 				var extracted_text = results[i][0];									// The text extracted by the rule by regex e.g. Avi Ramon$#$$$$s
+ 				miscutils.logMessage("Extracted: " 		  + extracted_text,		 2);
+ 				miscutils.logMessage("Expected results: " + expected_results[i], 2);
+ 				
+ 				if(extracted_text == null || _.isNull(extracted_text)){
+ 					console.log("Null found")
+ 					miscutils.logMessage("Not Applicable! Executable: " + JSON.stringify(executable), 	1);	
+ 					is_applic = false;
+ 					break;
+ 				}
+ 				if( ! _.isEqual(extracted_text, expected_results[i]) ){
+ 					miscutils.logMessage("Not Applicable! Executable: " + JSON.stringify(executable), 	1);	
+ 					is_applic = false;
+ 					break;
+ 					//deferred.resolve(-1);											// If the extracted text is null or doesn't match the highlight, then return nothing
+ 				}
+ 			}	
+
+ 			// TODO check for other rules of other types
+ 		}
+
+ 		if(!is_applic){
+ 			miscutils.logMessage("Executable is not applicable", 	1);
+ 			deferred.resolve(-1);
+ 		}else{
+ 			// If code reaches thi point, it means that the rule is applicable to the highlights
+ 			miscutils.logMessage("Executable Works!", 				1);
+ 			deferred.resolve(executable);
+ 		}
+ 	});
+
+ 	return deferred.promise;
+
+}
+
+function read_doc_structure(highlights){
+	var fs 	= require('fs');
+	for(var i=0; i<highlights.length; i++){  // Read the docstructure of the files
+		var elem 					= highlights[i];
+ 		highlights[i].file_contents = JSON.parse(fs.readFileSync(elem.file))
+ 	}
+ 	return highlights;
 }
 /*
 ******************************************************************************************************************************
