@@ -311,15 +311,15 @@ function call_traverse(command){
 	var exec            = require('child_process').exec;  
     var child           = exec(command);
     var result_data 	= {}
-    miscutils.logMessage("Python call for traverse: " + command, 1)
+    miscutils.logMessage("Python call for traverse: " + command, 	1);
 
     child.stdout.on('data', function(data){             				// Data format is {data:[string, string, ...]}
-        miscutils.logMessage("Data from traverse: " + data, 1);
+        miscutils.logMessage("Data from traverse: " + data, 		1);
         result_data  	= JSON.parse(data).data;
     });
 
     child.stderr.on('data', function(data){
-        miscutils.logMessage("stderr:" + data, 1);
+        miscutils.logMessage("stderr:" + data, 						1);
         deferred.reject(err)
     });
 
@@ -345,6 +345,10 @@ function isOp(entity_type, string){
     var deferred    = Q.defer();
 
 	NER(string).then(function(found_entities){						// Apply AlchemyAPI NER onto the string
+		
+		if( found_entities.length <= 0 ){							// found_entities can be an empty array, which in this case, we return an empty string
+			deferred.resolve( "" );								
+		}
 		var match = _.find( found_entities, function( entity_obj ){	// Given the result, a list of NER within the string, find the ones that match @entity_type.
 			return  _.isEqual( entity_obj.type, entity_type );		// entity_type: {type:"Person", text:"Maeda Hanafi", relevance, count}
 		});
@@ -386,8 +390,10 @@ function inDict(concept_dictionary, dictionary, string){
 		miscutils.logMessage( match, 										2);
 		miscutils.logMessage( '________________________________________', 	2);
 
-		if (match != null){
+		if (match != null || match !=undefined){
 			deferred.resolve( match[0] );		
+		}else{
+			deferred.resolve( "" );
 		}
 	}
 
@@ -403,23 +409,10 @@ function inDict(concept_dictionary, dictionary, string){
 	So, before executing, we must escape the escape characters in string
 */
 function regular_expression(regex, regex_flags, string){
-	/*console.log(string)
-	string = "PATRICIA P. PATTERSON\\n\\n"
-	regex = /[A-Z\s\.]+/g
-	console.log(regex)
-	var mat = string.match(regex)
-	console.log( mat)
-	return string.match(regex)*/
-	//var Q           = require('Q');
-    //var deferred    = Q.defer();
 	// Escape the escape characters
 	string = escape_escape_char(string);
 	
-	//console.log(string)
-	//console.log(regex)
 	return string.match(new RegExp(regex, regex_flags));
-
-	//return deferred.promise;
 }
 
 /*

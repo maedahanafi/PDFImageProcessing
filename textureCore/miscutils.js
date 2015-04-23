@@ -97,7 +97,7 @@ exports.promise_while = promise_while;
 // Returns a boolean indicating whether inArr contains a null
 function isNullExist(inArr){
 	// Since even checking for nulls cannot be done while in the loop e.g. trying to get the contents of a slot that is null is not possible/error
-	var isNullExist = _.findKey(inArr, function(chr) {
+	var isNullExist = _.findIndex(inArr, function(chr) {
 		return chr == null;
 	})
 	return isNullExist != -1;

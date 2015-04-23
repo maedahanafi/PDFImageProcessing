@@ -13,8 +13,9 @@ var Combinatorics 	= require('./combinatorics.js').Combinatorics;
 var executor 		= require('./execute');
 var _ 				= require('lodash');
 
-var generator 		=  new require("./regexgenerator.js").RegexGenerator() ;
+var generator 		= new require("./regexgenerator.js").RegexGenerator() ;
 var regex 			= generator.init();
+regex 				= ['[A-Z]+\\s[A-Z]+', '[a-z]+'];
 
 var pat_name 		= './image_processing/document_structure/patricia0.json';
 var patricia_doc	= miscutils.fs_readFile(pat_name);
@@ -29,7 +30,7 @@ var name_highlights = {'highlights':
 							 'text': 'RAVI AMON',
 							 "line_type":"TITLE",
 							 'file':'./image_processing/document_structure/ravi0.json'
-							}, 
+							}/*, 
 							{'label':'Name',
 							 'page_number': 0,
 							 "line_number": 0,
@@ -195,14 +196,21 @@ function filterExecutables(executables, highlights){
  	},function(){															// Action: For each executable execute it on all document structures
  		var executable = executables[i];
  		/*console.log("Action Loop")
- 		console.log('@4')
- 		console.log(i + " out of "+executables.length)*/
+ 		console.log('@4')*/
+ 		console.log(i + " out of "+executables.length)
  		i++;
  		return isExecutableApplicable(executable, highlights);
  	}).then(function(results){												// After the loop executes, results will contain an array of al executables applicable to the highlights e.g. [{executable}, {executable}, etc]
- 		miscutils.logMessage("Filtered executables " + results.length + ":", 1);
- 		miscutils.logMessage(results)
- 		deferred.resolve(results);
+ 		console.log('@1:' + results.length)
+ 		console.log(results)
+ 		// Filter out the elements that have -1:
+ 		var filtered_results = _.remove(results, function(n) {
+			return n != -1;
+		});
+		console.log(filtered_results)
+ 		miscutils.logMessage("Filtered executables " + filtered_results.length + ":", 	1);
+ 		miscutils.logMessage(filtered_results, 											1);
+ 		deferred.resolve(filtered_results);
  	});
  	
 
@@ -239,44 +247,43 @@ function isExecutableApplicable(executable, highlights){
  		miscutils.logMessage(expected_results, 									1);
 
  		if(miscutils.isNullExist(results)){											// If there exists a null in the results, then we return, since even checking for nulls cannot be done while in the loop below e.g. trying to get the contents of a slot that is null is not possible/error
-			miscutils.logMessage("Executable is not applicable", 	1);
+			miscutils.logMessage("Executable is not applicable: null exists in results", 	1);
  			deferred.resolve(-1);
-		}
+		}else{
+	 		var function_match_type = executable[executable.length - 1].function;		// This is the textual match's function type e.g. is, regular_expression, or in
+	 		var is_applic = true;
+	 		for(var i = 0; i < results.length; i++){									// Iterate through array, compare result[i] with expected_result[i]
 
- 		var function_match_type = executable[executable.length - 1].function;		// This is the textual match's function type e.g. is, regular_expression, or in
- 		var is_applic = true;
- 		for(var i = 0; i < results.length; i++){									// Iterate through array, compare result[i] with expected_result[i]
+	 			if( _.isEqual(function_match_type, 'regular_expression') ){				// Read the results as a regular expression result
 
- 			if( _.isEqual(function_match_type, 'regular_expression') ){				// Read the results as a regular expression result
+	 				var extracted_text = results[i][0];									// The text extracted by the rule by regex e.g. Avi Ramon$#$$$$s
+	 				miscutils.logMessage("Extracted: " 		  + extracted_text,		 2);
+	 				miscutils.logMessage("Expected results: " + expected_results[i], 2);
+	 				
+	 				/*if(extracted_text == null || _.isNull(extracted_text)){
+	 					miscutils.logMessage("Not Applicable! Executable: " + JSON.stringify(executable), 	1);	
+	 					is_applic = false;
+	 					break;
+	 				}*/
+	 				if( ! _.isEqual(extracted_text, expected_results[i]) ){
+	 					miscutils.logMessage("Not Applicable! Executable: " + JSON.stringify(executable), 	1);	
+	 					is_applic = false;
+	 					break;
+	 					//deferred.resolve(-1);											
+	 				}
+	 			}	
 
- 				var extracted_text = results[i][0];									// The text extracted by the rule by regex e.g. Avi Ramon$#$$$$s
- 				miscutils.logMessage("Extracted: " 		  + extracted_text,		 2);
- 				miscutils.logMessage("Expected results: " + expected_results[i], 2);
- 				
- 				if(extracted_text == null || _.isNull(extracted_text)){
- 					console.log("Null found")
- 					miscutils.logMessage("Not Applicable! Executable: " + JSON.stringify(executable), 	1);	
- 					is_applic = false;
- 					break;
- 				}
- 				if( ! _.isEqual(extracted_text, expected_results[i]) ){
- 					miscutils.logMessage("Not Applicable! Executable: " + JSON.stringify(executable), 	1);	
- 					is_applic = false;
- 					break;
- 					//deferred.resolve(-1);											// If the extracted text is null or doesn't match the highlight, then return nothing
- 				}
- 			}	
+	 			// TODO check for other rules of other types
+	 		}
 
- 			// TODO check for other rules of other types
- 		}
-
- 		if(!is_applic){
- 			miscutils.logMessage("Executable is not applicable", 	1);
- 			deferred.resolve(-1);
- 		}else{
- 			// If code reaches thi point, it means that the rule is applicable to the highlights
- 			miscutils.logMessage("Executable Works!", 				1);
- 			deferred.resolve(executable);
+	 		if(!is_applic){ // If the extracted text is null or doesn't match the highlight, then return nothing
+	 			miscutils.logMessage("Executable is not applicable", 	1);
+	 			deferred.resolve(-1);
+	 		}else{
+	 			// If code reaches thi point, it means that the rule is applicable to the highlights
+	 			miscutils.logMessage("Executable Works!", 				1);
+	 			deferred.resolve(executable);
+	 		}
  		}
  	});
 
