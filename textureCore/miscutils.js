@@ -163,6 +163,8 @@ var AlchemyAPIEntities 	= [
 function NER (totaltext ){
 	var Q 		 = require('Q');
 	var deferred = Q.defer();
+	// Clean the text before sending to alchemyAPI:
+	totaltext	 = validate_and_clean(totaltext);
 
 	alchemy.entities(totaltext, {}, function(err, response) {
 		if (err){
@@ -171,9 +173,9 @@ function NER (totaltext ){
 		}else{
 			var entities = response.entities; 				// See http://www.alchemyapi.com/api/entity/htmlc.html for format of returned object
  			//Entities is an arrays of objects [{text, type}, ...]
-			logMessage(totaltext, 							2);
+			logMessage(totaltext, 								3);
 			logMessage(entities, 								2);
-			logMessage('-----------------------------------', 2);
+			logMessage('-----------------------------------', 	2);
 			deferred.resolve(entities);
  		}
 	});
@@ -181,3 +183,80 @@ function NER (totaltext ){
 }
 exports.NER = NER;
 
+/********************************************************************************
+ Clean OCR tasks
+ ********************************************************************************/
+var VALID_PUNCTUATION = [
+	'!',
+	'@',
+	'#',
+	'$',
+	'%',
+	'^',
+	'&',
+	'*',
+	'(',
+	')',
+	'-',
+	'_',
+	'+',
+	'=',
+	'{',
+	'[',
+	'}',
+	']',
+	'\\',
+	'|',
+	';',
+	':',
+	'\'',
+	'"',
+	',',
+	'<',
+	'.',
+	'>',
+	'?',
+	'/',
+	'\n',
+	'\t',
+	'\r',
+	'\f',
+	'\s',
+	' '	
+];
+ /*
+	We need to boost the accuracy of the NER by cleaning the OCR-recognized text from 
+	random sequences of symbols without cleaning the important symbols such as \n or 
+	punctuation symbols. If we have a dictionary of valid punctuation marks, then we 
+	can clean out the symbols that are invalid.
+
+	The regex that can detect invalid characters:
+	[^!\@\#\$\%\^\&\*\(\)\-\_\+\=\{\[\}\]\\\|\;\:\'\"\,\<\.\>\?\/ \n\t\r\fa-zA-Z0-9]+
+
+	The regex that detects sequences of punctuations of minimum length 5 e.g. $';::::::;;‘::
+	[^a-zA-Z0-9]{6,}
+ */
+function validate_and_clean(string){
+	// Remove all invalid characters 
+	var clean_string = string.replace(/[^!\@\#\$\%\^\&\*\(\)\-\_\+\=\{\[\}\]\\\|\;\:\'\"\,\<\.\>\?\/ \n\s\t\r\fa-zA-Z0-9]+/g, "");
+	// Remove all sequences of punctuations of minimum length 6
+	clean_string = clean_string.replace(/[^a-zA-Z0-9]{6,}/g, "");
+	
+
+	/*var clean_string 	= "";						// Valid characters are accumulated into clean_string
+	var per_char 		= string.split("");
+	
+	for(var i=0; i<per_char.length; i++){			// For each over each character in string
+		
+		if( /[a-zA-Z0-9]/.test(per_char[i]) ){ 		// Check if alphanumeric
+			clean_string = clean_string + per_char[i];
+		}else if( _.findIndex(VALID_PUNCTUATION, function(punc){ return _.isEqual(punc, per_char[i]); }) != -1 ){ 
+			// Then check if punctuation
+			clean_string = clean_string + per_char[i];
+		}											// If either of the conditions are met then it is added into clean_string
+		
+	}*/
+
+	return clean_string;
+}
+exports.validate_and_clean = validate_and_clean;

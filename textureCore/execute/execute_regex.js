@@ -15,7 +15,7 @@ function regular_expression(regex, regex_flags, string){
 	if(match == null){
 		match = undefined;
 	}else{	// The format should be [match, index found, string]
-		match = match[0]
+		match = match[0];
 	}
 	return {'operator':'regular_expression', 'result':match};
 }

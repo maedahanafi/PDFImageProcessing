@@ -16,7 +16,6 @@
 
 
 var imagemagick     = require('./imageutils.js');
-var jsesc           = require('jsesc');
 var _               = require('lodash');
 var util            = require('util');
 var miscutils       = require('./../miscutils');
@@ -73,9 +72,9 @@ function imagedocuments2structure(arr_files, isWriteToFile){
                         .then(ocr_on_page)
                         .then(function(document_stucture){
 
-                            var out_file =      arr_files[0].match(/\/([a-zA-Z0-9_ \-\.]+)+\./)[1];
+                            var out_file = arr_files[0].match(/\/([a-zA-Z0-9_ \-\.]+)+\./)[1];
                             if(isWriteToFile){
-                                                miscutils.write_to_file(doc_struct_dir + out_file + '.json', JSON.stringify(document_stucture));
+                                miscutils.write_to_file(doc_struct_dir + out_file + '.json', JSON.stringify(document_stucture));
                             }
 
                             deferred.resolve(document_stucture);
@@ -195,19 +194,19 @@ function ocr_on_page(document_structure){
     var allPromise = Q.all(arr_promises ).then(function(ocrResults){
         
         var index  = 0;
-        document_structure.forEach(function(page_structure){                //Assign the results of OCR to our datastructure, document_structure
+        document_structure.forEach(function(page_structure){                            //Assign the results of OCR to our datastructure, document_structure
             page_structure.page_content.forEach(function(groupElem){
-                groupElem.group.forEach(function(lineElem){                 //Loop through each line in a group
-                    
-                    lineElem.text = ocrResults[index];                      //Assign the text to lineElem.text
+                groupElem.group.forEach(function(lineElem){                             //Loop through each line in a group
+
+                    lineElem.text = (ocrResults[index]);    //Assign the text to lineElem.text
                     index++;
                     
                 });
             });
         });
 
-        miscutils.logMessage('Results after the OCR:', 1)
-        miscutils.logMessage(JSON.stringify(document_structure), 1);
+        miscutils.logMessage('Results after the OCR:', 2);
+        miscutils.logMessage(JSON.stringify(document_structure), 2);
         
         deferred.resolve(document_structure);
     });

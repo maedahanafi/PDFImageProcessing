@@ -31,7 +31,7 @@ var name_highlights = {'highlights':
 							 'word_number':0,	//Delimited by spaces, the nth word in the sentence
 							 "line_type":"TITLE",
 							 'text': 'RICHARD A. LEVINSON',
-							 'file':'./image_processing/document_structure/richard0.json'
+							 'file':__dirname + '/../image_processing/document_structure/richard0.json'
 							},
 							{'label':'Name',
 							 'page_number': 0,
@@ -40,7 +40,7 @@ var name_highlights = {'highlights':
 							 'word_number':0,	//Delimited by spaces, the nth word in the sentence
 							 "line_type":"TITLE",
 							 'text': 'PATRICIA P. PATTERSON',
-							 'file':'./image_processing/document_structure/patricia0.json'
+							 'file':__dirname + '/../image_processing/document_structure/patricia0.json'
 							},
 							{'label':'Name',
 							 'page_number': 0,
@@ -49,7 +49,7 @@ var name_highlights = {'highlights':
 							 'word_number':0,	//Delimited by spaces, the nth word in the sentence
 							 "line_type":"SECTION",
 							 'text': 'JANE M. SAMPLE',
-							 'file':'./image_processing/document_structure/sample0.json'
+							 'file':__dirname + '/../image_processing/document_structure/sample0.json'
 							},
 							{'label':'Name',
 							 'page_number': 0,
@@ -58,7 +58,7 @@ var name_highlights = {'highlights':
 							 'word_number':0,	//Delimited by spaces, the nth word in the sentence
 							 "line_type":"SECTION",
 							 'text': 'SCOTT E. LEFKOWITZ',
-							 'file':'./image_processing/document_structure/scott0.json'
+							 'file':__dirname + '/../image_processing/document_structure/scott0.json'
 							}/*,
 							{'label':'Name',
 							 'page_number': 0,
@@ -67,7 +67,7 @@ var name_highlights = {'highlights':
 							 'word_number':0,	//Delimited by spaces, the nth word in the sentence
 							 "line_type":"TITLE",
 							 'text': 'MICHAEL D. SIERRA',
-							 'file':'./image_processing/document_structure/sierra0.json'
+							 'file':__dirname + '/../image_processing/document_structure/sierra0.json'
 							},
 							{'label':'Name',
 							 'page_number': 0,
@@ -76,7 +76,7 @@ var name_highlights = {'highlights':
 							 'word_number':0,	//Delimited by spaces, the nth word in the sentence
 							 "line_type":"TITLE",
 							 'text': 'Susan B. Simmons',
-							 'file':'./image_processing/document_structure/susan0.json'
+							 'file':__dirname + '/../image_processing/document_structure/susan0.json'
 							}*/
 						]
 					};
@@ -88,7 +88,7 @@ var dictionaries = [	// This contains all dictionaties e.g. [{name:schools, cont
 								{"type":"text",  "content":"Maeda"}
 								,{"type":"regex", "content":["[A-Z\\.\\s]+", ""]}
 								,{"type":"entity",	 "content":"Person"}
-								,{"type":"text", "content":"RAVI AMON"}
+								//,{"type":"text", "content":"RAVI AMON"}
 							]
 						}
 					];
@@ -230,7 +230,6 @@ function isExecutableApplicable(executable, highlights){
 
  		var is_applic = isExtractedEqualExpected(results, expected_results);
  		
-
  		if(!is_applic){ 															// If the extracted text is null or doesn't match the highlight, then return nothing
  			miscutils.logMessage("Executable is not applicable" + JSON.stringify(executable), 	1);
  			deferred.resolve(-1);
@@ -257,19 +256,19 @@ function isExtractedEqualExpected(results, expected_results){
 		miscutils.logMessage("Extracted: " 		  + JSON.stringify(extracted_text), 1);
 		miscutils.logMessage("Expected results: " + JSON.stringify(expected), 		1);
 			
-		if( _.isEqual(res_op, 'regular_expression') ){				// Read the results as a regular expression result	 				
+		if( _.isEqual(res_op, 'regular_expression') ){								// Read the results as a regular expression result	 				
 			if( ! _.isEqual(extracted_text, expected) ){
 				return false;
 			}
-		}else if( _.isEqual(res_op, 'is') ){						// Read the results as an is operator (entity), which is an array
+		}else if( _.isEqual(res_op, 'is') ){										// Read the results as an is operator (entity), which is an array
 			if(_.findIndex(extracted_text, function(text){return _.isEqual(text, expected);}) == -1){		// Find the if the array of extracted entities contains the expected entity
 				return false;
 			}
-		}else if( _.isEqual(res_op, 'in') ){						// Read the results as an in operator (dictionary) which is an array of {operator, results}
+		}else if( _.isEqual(res_op, 'in') ){										// Read the results as an in operator (dictionary) which is an array of {operator, results}
 			// extracted_text is e.g. [{op:, result:string|array}, ...]
-			var possible_match = _.flatten(_.pluck(extracted_text, 'result'));	// extracted_text is flatten to an array
+			var possible_match = _.flatten(_.pluck(extracted_text, 'result'));		// extracted_text is flatten to an array
 			
-			if(_.findIndex(possible_match, function(text){return _.isEqual(text, expected);}) == -1){ // Ensure that the expected exists in possible_match
+			if(_.findIndex(possible_match, function(text){return _.isEqual(text, expected);}) == -1){ 		// Ensure that the expected exists in possible_match
 				return false;
 			}
 		}
@@ -280,7 +279,7 @@ function isExtractedEqualExpected(results, expected_results){
 
 function read_doc_structure(highlights){
 	var fs 	= require('fs');
-	for(var i=0; i<highlights.length; i++){  											// Read the docstructure of the files
+	for(var i=0; i<highlights.length; i++){  										// Read the docstructure of the files
 		var elem 					= highlights[i];
  		highlights[i].file_contents = JSON.parse(fs.readFileSync(elem.file))
  	}
@@ -291,13 +290,6 @@ function read_doc_structure(highlights){
 */
 
 
-
-
-
-
-/*
-******************************************************************************************************************************
-*/
 /*
 	And when grabbing the highlight text from the image via interface, we must also figure 	
 	out which line the highlight is from. The highlighted text should be indicated within the 
