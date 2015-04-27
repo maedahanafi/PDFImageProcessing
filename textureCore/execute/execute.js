@@ -28,85 +28,29 @@
 								- in 				 :{'function':'in', 'function_param': [dict name, dict_array]}
 								- is 				 :{'function':'is', 'function_param': [entity type]}
 							See example1, example2, example3, respectively.
+
 */
 
-// AlchemyAPI API key
-var APIKey 			= "37abd9121c9dc242fdd73073c0f68b935e6631a3";
-var AlchemyAPI 		= require('alchemy-api');
-var alchemy 		= new AlchemyAPI(APIKey);
 
-var miscutils 		= require('./miscutils.js');
-var _ 				= require('lodash');
 
-var pat_name 		= './image_processing/document_structure/patricia0.json';
-var patricia_doc	= miscutils.fs_readFile(pat_name);
+var miscutils 			= require('./../miscutils.js');
+var _ 					= require('lodash');
+
+var regex_executor 		= require('./execute_regex.js');
+var is_entity_executor 	= require('./execute_is_entity.js');
+var in_dict_executor 	= require('./execute_in_dict.js');
+
+var call_traverse 		= require('./../traverse/call_traversal.js');
+
+
+var pat_name 			= 'image_processing/document_structure/patricia0.json';
+var patricia_doc		= miscutils.fs_readFile(pat_name);
 // Dictionary used in testing
-var name_dictionary = [	
-						{"type":"text",  "content":"Maeda"}, 
-						{"type":"regex", "content":["[A-Z]+", ""]}
-					  ];
+var name_dictionary 	= [	
+							{"type":"text",  "content":"Maeda"}, 
+							{"type":"regex", "content":["[A-Z]+", ""]}
+						  ];
 
-/*
-******************************************************************************************************************************
-*/
-// Running
-// Execute a rule that will extract executable
-//example2()
-function example1(){
-	/*
-		Name:= [A-Z\s\.]+
-		From Title #1
-	*/
-	var executable = [
-		{'function':'from', 			  'function_param': ['Title', 0]},			// First index should always be a from; params should describe how to get there
-		{'function':'regular_expression', 'function_param': ['[A-Z\\s\\.]+', '']}	// regex params: [regex string exp, regex flags string]
-	];
-	extract( pat_name, patricia_doc, executable )
-}
-
-function example2(){
-	/*
-		Name := in(person_name) 
-		From Title #1
-	*/
-	var executable = [
-		{'function':'from', 'function_param': ['Title', 0]},						// First index should always be a from; params should describe how to get there
-		{'function':'in'  , 'function_param': ['name_dictionary', name_dictionary ]}// in params: [dict name, dict_array]
-	];
-	extract( pat_name, patricia_doc, executable );
-}
-
-function example3(){
-	/*
-		Name:= is(Person)
-		From Title #1
-	*/
-	var executable = [
-		{'function':'from', 'function_param': ['Title', 0]},						// First index should always be a from; params should describe how to get there
-		{'function':'is'  , 'function_param': ['Person' ]}							// is params: [entity type]
-	];
-	extract( pat_name, patricia_doc, executable );
-}
-
-/* 
-******************************************************************************************************************************
-*/
-
-function operator_test(){
-	// Test on is()
-	isOp("PrintMedia", "Juvenile & Adult Treatment! Individual, Family & Group Counseling\n\n")
-	.then(function(data){
-		miscutils.logMessage( "Text matching:", 						1);
-		miscutils.logMessage( data, 									1);
-
-	});
-
-	// Test on inDict
-	inDict("name_dictionary", name_dictionary, "PATRICIA P. PATTERSON\n\n").then(function(match){
-		miscutils.logMessage( 'Match between Regex and Dict Entry: ', 	1);
-		miscutils.logMessage( match, 									1);
-	});
-}
 
 /*
 ******************************************************************************************************************************
@@ -126,12 +70,12 @@ function extract(filename, document_structure, executables){
 		var from_elem 	= executables[0].function_param;							// The first element in executables[] is always a from statement
 		var box_elem 	= from_elem[0];
 		
-		var command = "python traverse.py " + filename + " "    + box_elem;
+		var command = "\'" + filename + "\' "    + box_elem;
 		if( from_elem.length > 1 ){	command = command  + " -n " + from_elem[1];	}	// Assign a box number, n, if an n exist, by checking the from_elem length
 		if( from_elem.length > 2 ){	command = command  + " -m " + from_elem[2];	}	// Assign a box number, m, if an m exist
 
 		var i = 1;
-		call_traverse(command).then(function(string_arr){							// string_arr is an array of strings to apply the operator on
+		new require("./../traverse/call_traversal.js")(command).run().then(function(string_arr){							// string_arr is an array of strings to apply the operator on
 			miscutils.logMessage(string_arr, 1)
 			
 			// op_string is the string to apply the operator on. After each iteration, it is bound to change.
@@ -187,29 +131,29 @@ function execute(op_string, executables, i){
 
 	if ( _.isEqual(operator, "is") ){
 
-		isOp.apply(operator, op_params).then(function(data){
+		is_entity_executor.isOp.apply(operator, op_params).then(function(data){	// !!!! data is an array !!!!
 			op_string = data;												// Execute operator and Assign a new op_string
 			miscutils.logMessage("Finale result after executing " + operator, 	2)
-			miscutils.logMessage(op_string, 									2)
+			miscutils.logMessage(JSON.stringify(op_string),						2)
 			deferred.resolve(op_string);
 
 		});
 
 	}else if ( _.isEqual(operator, "in") ){
 		
-		inDict.apply(operator, op_params).then(function(data){
+		in_dict_executor.inDict.apply(operator, op_params).then(function(data){
 			op_string = data;												// Execute operator and Assign a new op_string
 			miscutils.logMessage("Finale result after executing " + operator, 	2)
-			miscutils.logMessage(op_string, 									2)
+			miscutils.logMessage(JSON.stringify(op_string),						2)
 			deferred.resolve(op_string);
 
 		});
 
 	}else if ( _.isEqual(operator, "regular_expression") ){
 
-		op_string = regular_expression.apply(operator, op_params);			// Execute operator and Assign a new op_string
+		op_string = regex_executor.regular_expression.apply(operator, op_params);			// Execute operator and Assign a new op_string
 		miscutils.logMessage("Finale result after executing " + operator, 		2)
-		miscutils.logMessage(op_string, 										2)
+		miscutils.logMessage(JSON.stringify(op_string),							2)
 		deferred.resolve(op_string);
 
 	}
@@ -301,129 +245,12 @@ function execute(op_string, executables, i){
 
 }
 
-/*
-	Call a python traverser to return the string that matches the descriptions within the @command
-	@command is the command line to execute in order to call traverse.py
-*/
-function call_traverse(command){
-	var Q           	= require('Q');
-    var deferred    	= Q.defer();
-	var exec            = require('child_process').exec;  
-    var child           = exec(command);
-    var result_data 	= {}
-    miscutils.logMessage("Python call for traverse: " + command, 	1);
 
-    child.stdout.on('data', function(data){             				// Data format is {data:[string, string, ...]}
-        miscutils.logMessage("Data from traverse: " + data, 		1);
-        result_data  	= JSON.parse(data).data;
-    });
 
-    child.stderr.on('data', function(data){
-        miscutils.logMessage("stderr:" + data, 						1);
-        deferred.reject(err)
-    });
-
-    child.on('close', function(code){
-        miscutils.logMessage('Closing code for exec traverse\'s python:' + code, 1);
-        deferred.resolve( result_data );		
-    });
-
-    return deferred.promise;
-}
 
 /*
 ******************************************************************************************************************************
 */
-/*
-	Return the substring of string that matches the entity type
-	@entity_type is an entity type from the list of entities 
-	@string is the string of what ever is in the box/part
-*/
-function isOp(entity_type, string){
-
-	var Q           = require('Q');
-    var deferred    = Q.defer();
-
-	NER(string).then(function(found_entities){						// Apply AlchemyAPI NER onto the string
-		
-		if( found_entities.length <= 0 ){							// found_entities can be an empty array, which in this case, we return an empty string
-			deferred.resolve( "" );								
-		}
-		var match = _.find( found_entities, function( entity_obj ){	// Given the result, a list of NER within the string, find the ones that match @entity_type.
-			return  _.isEqual( entity_obj.type, entity_type );		// entity_type: {type:"Person", text:"Maeda Hanafi", relevance, count}
-		});
-		deferred.resolve( match.text );								// Return that string.
-	});
-
-	return deferred.promise;
-}
-
-/*
-	Find a match between the contents of concept dictionary and string. Return the substring that matches.
-	@concept_dictionary, is the name of the dictionary. 
-	@dictionary is an array of what is contained in @concept_dictionary e.g. [{type: text, content:"Maeda"}, {type: regex, content:"/[A-Z]+/"}]
-*/
-function inDict(concept_dictionary, dictionary, string){
-
-	var Q           = require('Q');
-    var deferred    = Q.defer();
-
-	miscutils.logMessage('String: ' + string, 								2);
-
-	for(var g = 0; g < dictionary.length; g++){						// Find a match between a string's substring and a dictionary's entry
-		
-		var dict_entry 		= dictionary[g];
-		var regex_string, regex_flags, match;
-
-		if (dict_entry.type == 'regex'){
-			regex_string 	= dict_entry.content[0];
-			regex_flags 	= dict_entry.content[1];
-			match 			= regular_expression(regex_string, regex_flags, string);
-		}else if(dict_entry.type == 'type'){
-			regex_string 	= dict_entry.content;
-			match 			= regular_expression(regex_string, regex_flags, string);
-		}
-		miscutils.logMessage( 'Dictionary entry: ', 						2);
-		miscutils.logMessage( dict_entry, 									2);
-		miscutils.logMessage( 'Regex string: ' + regex_string, 				2);
-		miscutils.logMessage( 'Match between Regex and Dict Entry: ', 		2);
-		miscutils.logMessage( match, 										2);
-		miscutils.logMessage( '________________________________________', 	2);
-
-		if (match != null || match !=undefined){
-			deferred.resolve( match[0] );		
-		}else{
-			deferred.resolve( "" );
-		}
-	}
-
-	return deferred.promise;
-}
-
-/*
-	Return the match of regex at string
-	@regex is a regex string //regex literal or a RegExp object
-
-	Note: if string = "PATRICIA P. PATTERSON\\n\\n" and regex = /[A-Z\s\.]+/g, then the newlines are captured, which is wrong.
-	if string  = "PATRICIA P. PATTERSON\n\n" and regex = /[A-Z\s\.]+/g, then the newlines are captured, which is wrong
-	So, before executing, we must escape the escape characters in string
-*/
-function regular_expression(regex, regex_flags, string){
-	// Escape the escape characters
-	string = escape_escape_char(string);
-	
-	return string.match(new RegExp(regex, regex_flags));
-}
-
-/*
-******************************************************************************************************************************
-*/
-
-
-
-
-
-
 
 
 /*
@@ -433,88 +260,6 @@ function permute(rules, location){
 
 }
 
-var AlchemyAPIEntities = [
-	'Anatomy',
-	'Anniversary',
-	'Automobile',
-	'City',
-	'Company',
-	'Continent',
-	'Country',
-	'Crime',
-	'Degree',
-	'Drug',
-	'EntertainmentAward',
-	'Facility',
-	'FieldTerminology',
-	'FinancialMarketIndex',
-	'GeographicFeature',
-	'HealthCondition',
-	'Holiday',
-	'JobTitle',
-	'Movie',
-	'MusicGroup',
-	'NaturalDisaster',
-	'OperatingSystem',
-	'Organization',
-	'Person',
-	'PrintMedia',
-	'Product',
-	'ProfessionalDegree',
-	'RadioProgram',
-	'RadioStation',
-	'Region',
-	'Sport',
-	'SportingEvent',
-	'StateOrCounty',
-	'Technology',
-	'TelevisionShow',
-	'TelevisionStation',
-	'EmailAddress',
-	'TwitterHandle',
-	'Hashtag',
-	'IPAddress',
-	'Quantity',
-	'Money'
-];
-/*
-	@totaltext is the text to extract entities from
-	@return is an array of {type: "Person", relevance:0.9, count:3, text: "Maeda Hanafi" }
-*/
-function NER(totaltext){
-	var Q           = require('Q');
-    var deferred    = Q.defer();
-
-	alchemy.entities(totaltext, {}, function(err, response) {
-		if (err){
-			miscutils.logMessage(err, 					1);
-			deferred.reject({'data':err})
-		}else{
-			var entities = response.entities; 					// See http://www.alchemyapi.com/api/entity/htmlc.html for format of returned object
-
-			miscutils.logMessage("Processing the NER", 	2);
-			miscutils.logMessage(entities, 				2);
-			deferred.resolve(entities);
-		}
-	});
-	return deferred.promise;
-};
-
-/*
-	@string is the string to find escaped characters and escape it's escape character e.g. 
-		string = "\n\n" -> @return is "\\n\\n"
-
-*/
-function escape_escape_char(string){
-	string = string.replace(/\\/g,  "\\\\");			// Escape the escape chracters first! Imortant! We dont want to escape the escape chracters of the those are already escaped
-	string = string.replace(/\n/g,  "\\n" );
-	string = string.replace(/\t/g,  "\\t" );
-	string = string.replace(/\'/g,  "\\'" );
-	string = string.replace(/\"/g,  "\\\"");
-	string = string.replace(/\r/g,  "\\r" );
-	string = string.replace(/\f/g,  "\\f" );
-	return string;
-}
 
 
 

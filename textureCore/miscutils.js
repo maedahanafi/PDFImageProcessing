@@ -6,7 +6,8 @@ var _ = require('lodash');
 var isConsoleLog 	= true;
 //If you want to debug every single step, enter in 2. Otherwise enter in 1.
 //Make sure that isConsoleLog is true though
-var debugLevel 		= 2;
+var debugLevel 		= 1;
+
 
 /********************************************************************************
  Functions for logging run time
@@ -16,7 +17,7 @@ function logMessage(message, msgDebugLevel){
 	if(isConsoleLog) {
 		if(debugLevel == 1 && msgDebugLevel == 1){
 			console.log((message));
-		}else if(debugLevel == 2){
+		}else if(debugLevel == 2 && msgDebugLevel<=2){
 			console.log((message));
 		}
 	}
@@ -103,3 +104,80 @@ function isNullExist(inArr){
 	return isNullExist != -1;
 }
 exports.isNullExist = isNullExist;
+
+/********************************************************************************
+ NER
+ ********************************************************************************/
+// AlchemyAPI API key
+var APIKey 				= "37abd9121c9dc242fdd73073c0f68b935e6631a3";
+var AlchemyAPI 			= require('alchemy-api');
+var alchemy 			= new AlchemyAPI(APIKey);
+var AlchemyAPIEntities 	= [
+	'Anatomy',
+	'Anniversary',
+	'Automobile',
+	'City',
+	'Company',
+	'Continent',
+	'Country',
+	'Crime',
+	'Degree',
+	'Drug',
+	'EntertainmentAward',
+	'Facility',
+	'FieldTerminology',
+	'FinancialMarketIndex',
+	'GeographicFeature',
+	'HealthCondition',
+	'Holiday',
+	'JobTitle',
+	'Movie',
+	'MusicGroup',
+	'NaturalDisaster',
+	'OperatingSystem',
+	'Organization',
+	'Person',
+	'PrintMedia',
+	'Product',
+	'ProfessionalDegree',
+	'RadioProgram',
+	'RadioStation',
+	'Region',
+	'Sport',
+	'SportingEvent',
+	'StateOrCounty',
+	'Technology',
+	'TelevisionShow',
+	'TelevisionStation',
+	'EmailAddress',
+	'TwitterHandle',
+	'Hashtag',
+	'IPAddress',
+	'Quantity',
+	'Money'
+];
+/*
+	@totaltext is the text to extract entities from
+	@return is an array of {type: "Person", relevance:0.9, count:3, text: "Maeda Hanafi" }
+*/
+function NER (totaltext ){
+	var Q 		 = require('Q');
+	var deferred = Q.defer();
+
+	alchemy.entities(totaltext, {}, function(err, response) {
+		if (err){
+			logMessage(err, 1);
+			deferred.reject(err);
+		}else{
+			var entities = response.entities; 				// See http://www.alchemyapi.com/api/entity/htmlc.html for format of returned object
+ 			//Entities is an arrays of objects [{text, type}, ...]
+			logMessage(totaltext, 							2);
+			logMessage(entities, 								2);
+			logMessage('-----------------------------------', 2);
+			deferred.resolve(entities);
+ 		}
+	});
+	return deferred.promise; // The promise is returned
+}
+exports.NER = NER;
+
