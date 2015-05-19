@@ -7,7 +7,7 @@ var _ 				= require('lodash');
 // TODO change this to natural order of things
 var generator 		= new require("./../regexgenerator.js").RegexGenerator() ;
 var regex 			= generator.init();
-regex 				= ['[A-Z]+\\s[A-Z]+', '[a-z]+'];
+//regex 				= ['[A-Z]+\\s[A-Z]+', '[a-z]+'];
 
 var executor 		= require('./../execute/execute');
 

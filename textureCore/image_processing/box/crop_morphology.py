@@ -1,5 +1,8 @@
 #!/usr/bin/env python
-'''Crop an image to just the portions containing text.
+'''
+This version is adapted for custom box definition.
+----------
+Crop an image to just the portions containing text.
 
 Usage:
 
@@ -41,37 +44,9 @@ from PIL import Image, ImageDraw, ImageFilter
 import numpy as np
 from scipy.ndimage.filters import rank_filter
 
+from custom_box import assign_line_type
 
-def assign_line_type(document_structure):
-    '''
-    If the first line of a group is the only one that has the maximum height within its group and that line isn't the only line in the group, 
-    assign it title. 
-    If the line is the only line in the group, it can be assigned title only if it is the biggest among the
-    whole document structure. All others are assigned section.
-    A more advanced grouping is expected later on through standard deviation between gaps as this method is quite basic.
-   
-    Also if the line heights aren't too different from each others, then we should treat them equal
-    
-    Edit:
-    A line is a title, when its height is greater than the 75th percentile among all heights. 
-    If there are more than one
-    line in a group, then the line must be the first one in the group to be a title and it must be the only one with that max height.
-    No need for further grouping since the dilation is sensitive to the grouping
-    '''
-    flatten_group_arr   = reduce(lambda x,y: x+y,[group['group'] for group in document_structure]) 
-    all_line_height_arr = [line['line_height'] for line in flatten_group_arr]
-    maxpercentile       = np.percentile(all_line_height_arr, 75)
 
-    for ctr in document_structure:
-        group               = ctr['group']
-        
-        for i, line in enumerate(group):
-            if i == 0 and line['line_height'] > maxpercentile:
-                line['line_type'] = 'TITLE'
-            else:
-                line['line_type'] = 'SECTION'
-
-    return document_structure
 
 
 def is_valid_crop(crop, im_size):
@@ -151,7 +126,7 @@ def crop_per_line(im, contours, edges):
             page_lines.append({
                                 'line_number'   :config.image_number, 
                                 'filename'      :this_out_path, 
-                                'line_type'     :'',                # We figure out the classfication later on
+                                'type'     :'',                # We figure out the classfication later on
                                 'x1'            :ct['x1'],          # The original bounding box coordinates are kept for classifcation purposes
                                 'y1'            :ct['y1'],
                                 'x2'            :ct['x2'],
@@ -204,6 +179,8 @@ def dilate(horizontal, ary, N, iterations):
         kernel              = np.zeros((N,N), dtype=np.uint8)
         kernel[:,(N-1)/2]   = 1
         dilated_image       = cv2.dilate(dilated_image, kernel, iterations=iterations)
+
+        
     
     return dilated_image
 
@@ -227,13 +204,14 @@ def find_components(edges, max_components, horizontal):
     
     if not horizontal:  
         n       = 1
+
         while count > max_components and prev_count!=count:
             n                   += 1
             dilated_image       = dilate(horizontal, edges, N=3, iterations=n)
             contours, hierarchy = cv2.findContours(dilated_image, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
             prev_count          = count
             count               = len(contours)
-        
+
         #Image.fromarray(edges).show()
         #Image.fromarray(255 * dilated_image).show()
 
@@ -409,6 +387,7 @@ def process_image(path, out_path):
     c_info              = props_for_contours(contours, edges)
     c_info.sort(key=lambda x: x['y1'])
 
+    draw    = ImageDraw.Draw(im)
     # print "done contouring"  
 
     # Cropping per line on a text_area and find the contours of each line
@@ -419,6 +398,7 @@ def process_image(path, out_path):
         horizontal_length       = text_area.size[0]
 
         # print "done extracting a line"  
+        #draw.rectangle(text_area_crop, outline='blue')
 
 
         # We will dilate horizontally instead of horizontally and vertically
@@ -426,7 +406,7 @@ def process_image(path, out_path):
         text_area_contours      = find_components(text_area_edges, horizontal_length, horizontal)
 
         if len(text_area_contours) != 0:
-            # draw.rectangle(this_crop, outline='blue')
+            #draw.rectangle(this_crop, outline='blue')
             
             # For each text area divide it by lines
             page_lines          = crop_per_line(text_area, text_area_contours, text_area_edges)
@@ -434,12 +414,12 @@ def process_image(path, out_path):
 
             # Printing the information will send it to the nodejs process
             # print json.dumps({'data':page_lines})
+    #edges.show()
 
     document_structure.sort(key=lambda x: x['group'][0]['y1'])
     document_structure          = assign_line_type(document_structure)
     print json.dumps({'data':document_structure})
-    #im.show()
-
+    return json.dumps({'data':document_structure})
 
 if __name__ == '__main__':
     if len(sys.argv) == 2 and '*' in sys.argv[1]:

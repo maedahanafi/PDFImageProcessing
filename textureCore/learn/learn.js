@@ -13,91 +13,10 @@ var learn_entity	= require('./learn_entity.js');
 var learn_dict 		= require('./learn_dictionary.js');
 var learn_boxes 	= require('./learn_boxes.js');
 
-var name_highlights = {'highlights':
-						[
-							{'label':'Name',
-							 'page_number': 0,
-							 "line_number": 0,
-							 "group_number":0,
-							 'word_number':0,	//Delimited by spaces, the nth word in the sentence
-							 'text': 'RAVI AMON',
-							 "line_type":"TITLE",
-							 'file':__dirname + '/../image_processing/document_structure/ravi0.json'
-							}/*, 
-							{'label':'Name',
-							 'page_number': 0,
-							 "line_number": 0,
-							 "group_number":0,
-							 'word_number':0,	//Delimited by spaces, the nth word in the sentence
-							 "line_type":"TITLE",
-							 'text': 'RICHARD A. LEVINSON',
-							 'file':__dirname + '/../image_processing/document_structure/richard0.json'
-							},
-							{'label':'Name',
-							 'page_number': 0,
-							 "line_number": 0,
-							 "group_number":0,
-							 'word_number':0,	//Delimited by spaces, the nth word in the sentence
-							 "line_type":"TITLE",
-							 'text': 'PATRICIA P. PATTERSON',
-							 'file':__dirname + '/../image_processing/document_structure/patricia0.json'
-							},
-							{'label':'Name',
-							 'page_number': 0,
-							 "line_number": 0,
-							 "group_number":0,
-							 'word_number':0,	//Delimited by spaces, the nth word in the sentence
-							 "line_type":"SECTION",
-							 'text': 'JANE M. SAMPLE',
-							 'file':__dirname + '/../image_processing/document_structure/sample0.json'
-							},
-							{'label':'Name',
-							 'page_number': 0,
-							 "line_number": 1,
-							 "group_number":0,
-							 'word_number':0,	//Delimited by spaces, the nth word in the sentence
-							 "line_type":"SECTION",
-							 'text': 'SCOTT E. LEFKOWITZ',
-							 'file':__dirname + '/../image_processing/document_structure/scott0.json'
-							}/*,
-							{'label':'Name',
-							 'page_number': 0,
-							 "line_number": 0,
-							 "group_number":0,
-							 'word_number':0,	//Delimited by spaces, the nth word in the sentence
-							 "line_type":"TITLE",
-							 'text': 'MICHAEL D. SIERRA',
-							 'file':__dirname + '/../image_processing/document_structure/sierra0.json'
-							},
-							{'label':'Name',
-							 'page_number': 0,
-							 "line_number": 0,
-							 "group_number":0,
-							 'word_number':0,	//Delimited by spaces, the nth word in the sentence
-							 "line_type":"TITLE",
-							 'text': 'Susan B. Simmons',
-							 'file':__dirname + '/../image_processing/document_structure/susan0.json'
-							}*/
-						]
-					};
-// Dictionary assumed to be provided by the user
-var dictionaries = [	// This contains all dictionaties e.g. [{name:schools, content:[ {text} or {regex}, ... ]}]
-						{
-							'name'   :   'name_dictionary' , 
-							'content': [	
-								{"type":"text",  "content":"Maeda"}
-								,{"type":"regex", "content":["[A-Z\\.\\s]+", ""]}
-								,{"type":"entity",	 "content":"Person"}
-								//,{"type":"text", "content":"RAVI AMON"}
-							]
-						}
-					];
-
 
 /*
 ******************************************************************************************************************************
 */
-beginLearn(name_highlights, dictionaries)
 function beginLearn(highlights, dictionaries){
 	// Read the contents of files first
 	highlights.highlights = read_doc_structure(highlights.highlights)
@@ -107,6 +26,8 @@ function beginLearn(highlights, dictionaries){
 	// invalid.
 	miscutils.logMessage('Begin Learning', 1);
  	var Q 					= require('Q');
+ 	var deferred   			= Q.defer();
+
  	// A partial executable is an element in an executable. It is in obj form e.g. {function, function_params}, 
  	// without the string to operate on added to the function_params.
 	var valid_partial_exec 	= []; 
@@ -155,7 +76,11 @@ function beginLearn(highlights, dictionaries){
 		miscutils.logMessage(possible_execs, 											2);
 
 		// Filter for rules that don't extract the highlights
-		filterExecutables(possible_execs, highlights.highlights).then(miscutils.saveLog());
+		filterExecutables(possible_execs, highlights.highlights)
+		.then(miscutils.saveLog()).then(function(results){
+			console.log('return to original caller')
+			deferred.resolve(results)
+		});
 
 
 	});
@@ -163,9 +88,9 @@ function beginLearn(highlights, dictionaries){
 	//4. Produce permutations of executables here [boxtype, optype] 
 	//e.g. [{function:from,}, {function:regex1}], [{function:from,}, {function:regex2}], [{function:from,}, {function:inDict}]
 	
-	
+	return deferred.promise;
 }
-
+exports.beginLearn = beginLearn;
 
 /* 
 
@@ -195,7 +120,7 @@ function filterExecutables(executables, highlights){
  		deferred.resolve(filtered_results);
  	});
  	
-
+ 	return deferred.promise;
 }
 
 /*
@@ -223,7 +148,7 @@ function isExecutableApplicable(executable, highlights){
  	}).then(function(results){															// After the loop executes, check if the executable is indeed applicable. results is an array that contains all the results of the executables. Each element at i in results[] corresponds to an executable on a document structure at i from highlights[]
 		
 		var expected_results = _.pluck(highlights,   'text');							// An array of only the highlight's text that belong to this entity e.g. ['Ravi Amon', 'Chris Sample']
- 		miscutils.logMessage("Executable result used: ", 						1);
+ 		miscutils.logMessage("Candidate Executable's result: ", 				1);
  		miscutils.logMessage(results,											1);
  		miscutils.logMessage("Expected Results: ",								1);
  		miscutils.logMessage(expected_results, 									1);

@@ -31,7 +31,7 @@ var doc_struct_dir  = 'document_structure/';
 //imagedocuments2structure(['img/michael1-ver2.png'], true)
 //imagedocuments2structure(['img/miller0.png'], true)
 imagedocuments2structure(['img/patricia0.png'], true)
-/*.then(imagedocuments2structure(['img/worthy0.png', 'img/worthy1.png'], true))
+.then(imagedocuments2structure(['img/worthy0.png', 'img/worthy1.png'], true))
 .then(imagedocuments2structure(['img/miller0.png', 'img/miller1.png'], true))
 .then(imagedocuments2structure(['img/patricia0.png', 'img/patricia1.png'], true))
 .then(imagedocuments2structure(['img/ravi0.png', 'img/ravi1.png'], true))
@@ -118,7 +118,7 @@ function imageprocess_page(page_number, pathyfilename, filename, image_ext){
     imagemagick.transparency2white(input_file, trans_file, function(){
                                                             //Secondly, invoke a child process that calls crop_morphology
         var exec            = require('child_process').exec;  
-        var cmd             = 'python crop_morphology.py ' + trans_file;  
+        var cmd             = 'python box/crop_morphology.py ' + trans_file;  
         var child           = exec(cmd);
         var org_doc_struct  = [];
 

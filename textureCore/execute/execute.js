@@ -67,10 +67,28 @@ function extract(filename, document_structure, executables){
 	// that the string to operate on has already been extracted and appended to the op_params
 	if(executables[0].function == 'from'){
 		// This is the normal case, where valid rules are execute e.g. the from statement is provided and so is the operator
-		var from_elem 	= executables[0].function_param;							// The first element in executables[] is always a from statement
+		var i = executables.length - 1;	// Where the executable for the textual match after the box match 
+
+		var box_executables = executables.slice(0, i);		// Box match executables range from 0 to the executable before the last one, which is the textual match e.g. is, in, or regex 
+		require("./../traverse/call_traversal.js").call_traverse(document_structure, box_executables).then(function(string_arr){
+			miscutils.logMessage("Box match arr:"+JSON.stringify(string_arr), 1);
+
+			// op_string is the string to apply the operator on. After each iteration, it is bound to change.
+			var op_string 	= _.reduce(string_arr, function(sum, string_elem){ return sum + string_elem });
+			var op_params 	= executables[i].function_param;						// Operator params e.g. [name_dictionary, etc]
+			op_params.push(op_string);  											// Append the string that the executable will be applied to. 
+
+ 			execute(op_string, executables, i).then(function(op_string){
+				deferred.resolve(op_string);
+			});
+		});
+
+
+		/*var from_elem = executables[0].function_param;							// The first element in executables[] is always a from statement
 		var box_elem 	= from_elem[0];
+
 		
-		var command = "\'" + filename + "\' "    + box_elem;
+		/*var command = "\'" + filename + "\' "    + box_elem;
 		if( from_elem.length > 1 ){	command = command  + " -n " + from_elem[1];	}	// Assign a box number, n, if an n exist, by checking the from_elem length
 		if( from_elem.length > 2 ){	command = command  + " -m " + from_elem[2];	}	// Assign a box number, m, if an m exist
 
@@ -86,7 +104,7 @@ function extract(filename, document_structure, executables){
  			execute(op_string, executables, i).then(function(op_string){
 				deferred.resolve(op_string);
 			});
-		});
+		});*/
 	}else{	
 		// This case is normally used when the string to operate on has already been extracted e.g. a from statement doesn't exist,
 		// from the document structure, thus there is no need to run a 'from' operator.

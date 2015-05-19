@@ -156,6 +156,8 @@ var AlchemyAPIEntities 	= [
 	'Quantity',
 	'Money'
 ];
+var NER_cache = [];	// The cache is an array of {totaltext:___, entities:___}
+var NER_CACHE_LIMIT = 10;
 /*
 	@totaltext is the text to extract entities from
 	@return is an array of {type: "Person", relevance:0.9, count:3, text: "Maeda Hanafi" }
@@ -163,22 +165,37 @@ var AlchemyAPIEntities 	= [
 function NER (totaltext ){
 	var Q 		 = require('Q');
 	var deferred = Q.defer();
-	// Clean the text before sending to alchemyAPI:
-	totaltext	 = validate_and_clean(totaltext);
 
-	alchemy.entities(totaltext, {}, function(err, response) {
-		if (err){
-			logMessage(err, 1);
-			deferred.reject(err);
-		}else{
-			var entities = response.entities; 				// See http://www.alchemyapi.com/api/entity/htmlc.html for format of returned object
- 			//Entities is an arrays of objects [{text, type}, ...]
-			logMessage(totaltext, 								3);
-			logMessage(entities, 								2);
-			logMessage('-----------------------------------', 	2);
-			deferred.resolve(entities);
- 		}
-	});
+	totaltext	 = validate_and_clean(totaltext);								// Clean the text before sending to alchemyAPI:
+	var cache_index = _.findIndex(NER_cache, function(ind){
+		return _.isEqual(ind.totaltext, totaltext); 
+	});																			// First search if the text has been sent to Alchemy before in the cache
+	
+	if(cache_index != -1){
+		var entities = NER_cache[cache_index];
+		logMessage("Accessing NER CACHE: " + NER_cache.length, 		1);
+
+		if(NER_cache.length>NER_CACHE_LIMIT){									// Delete old elements (the first one) if beyond the cache limit.
+			NER_cache = NER_cache.splice(0, 1);
+		}
+		deferred.resolve(entities);
+	}else{
+		alchemy.entities(totaltext, {}, function(err, response) {
+			if (err){
+				logMessage(err, 1);
+				deferred.reject(err);
+			}else{
+				var entities = response.entities; 								// See http://www.alchemyapi.com/api/entity/htmlc.html for format of returned object
+	 																			//Entities is an arrays of objects [{text, type}, ...]
+				logMessage(totaltext, 								3);
+				logMessage(entities, 								2);
+				logMessage('-----------------------------------', 	2);
+
+				NER_cache.push({'totaltext':totaltext, 'entities': entities}); 	// Add results to the cache
+				deferred.resolve(entities);
+	 		}
+		});
+	}
 	return deferred.promise; // The promise is returned
 }
 exports.NER = NER;

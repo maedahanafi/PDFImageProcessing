@@ -1,0 +1,4 @@
+#!/Users/mh4047/Desktop/bbr/venv/bin/python
+# EASY-INSTALL-SCRIPT: 'ete2==2.2.1072','ete2'
+__requires__ = 'ete2==2.2.1072'
+__import__('pkg_resources').run_script('ete2==2.2.1072', 'ete2')

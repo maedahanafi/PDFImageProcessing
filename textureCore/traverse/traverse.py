@@ -35,7 +35,7 @@ def isMatch(box1, box2):
         return True
     elif (box1 == 'Section' or box1 == 'Paragraph' or box1 == 'Group' or box1 == 'Lines') and (box2 == 'Section' or box2 == 'Paragraph' or box2 == 'Group' or box2 == 'Lines'):
         return True
-    elif (box1 == 'Title' or box1 == 'Heading' or box1 == 'Line') and (box2 == 'Title' or box2 == 'Heading' or box2 == 'Line'):
+    elif (box1 == 'Title' or box1 == 'Heading' or box1 == 'Line') and (box2 == 'Title' or box2 == 'Heading' or box2 == 'Line' ):
         return True
     return False
 
