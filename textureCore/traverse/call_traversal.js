@@ -1,5 +1,6 @@
 /*
-    Any access or traversals for the document structure goes through here
+    Any access or traversals for the document structure goes through here from nodejs
+    Calls the iterative traversal
 */
 
 var miscutils           = require('./../miscutils.js');

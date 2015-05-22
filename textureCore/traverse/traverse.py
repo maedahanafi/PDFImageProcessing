@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
     Maeda Hanafi
-    Traverses a document structure.
+    Traverses a document structure iteratively.
 
     To run this script, be sure to activate the env from folder /bbr: source venv/bin/activate
 '''

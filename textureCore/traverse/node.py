@@ -21,13 +21,14 @@ class NodeT(object):
         return self.value
 
     def add_kid(self, new_node):
-        #print new_node
         self.children.append(new_node)
-        #self.children.append(new_node)
-        #return self.children
+    
 
-    # @box_match e.g. {'function': 'after', 'function_param': ['string', 'EXPERIENCE']}
-    def traverse(self, box_match, level=0):
+    def traverse(self, direction, box_match, level=0):
+        '''
+        @direction can be "forward", "backward"
+        @box_match e.g. {'function': 'after', 'function_param': ['string', 'EXPERIENCE']}
+        '''
         box_func = box_match['function']
         box_param = box_match["function_param"]
 
@@ -35,19 +36,20 @@ class NodeT(object):
             print "match!:"+self.value
             return self
 
-        # Search for a node that matches the function_params
-        for node in self.children:
-            # If the function is 'after', then continue to traverse forward
-            if box_func == "after":
-                result = node.traverse(box_match, level+2)
-                
-            # If the function is a from clause, then find a title
-            elif box_func == "from":
-                result = node.traverse(box_match, level+2)
-       
-            # If a node is returned, then return that node
-            if result != None:  
-                return result
+        if direction == "forward":
+            # Search for a node that matches the function_params
+            for node in self.children:
+                # If the function is 'after', then continue to traverse forward
+                if box_func == "after":
+                    result = node.traverse(direction, box_match, level+2)
+                    
+                # If the function is a from clause, then find a title
+                elif box_func == "from":
+                    result = node.traverse(direction, box_match, level+2)
+           
+                # If a node is returned, then return that node
+                if result != None:  
+                    return result
 
     # @box_info contains the info of the box we are trying to find.
     def is_match(self, box_info):

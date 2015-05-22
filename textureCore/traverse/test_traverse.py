@@ -1,11 +1,11 @@
 '''
-Instantiate the document structure in python
+Instantiate the document structure in python and traverses the document smartly
 '''
 import json
 from node import NodeT
 from numpy import *
 
-def main(document_structure, box_match):
+def instantiate(document_structure, box_match):
 	root = NodeT("Root", "", [])
 	
 	for page_content_ctr in document_structure:
@@ -44,9 +44,10 @@ def main(document_structure, box_match):
 	# Loop through each box_match and execute each one
 	for index, item in reversed(list(enumerate(box_match))):
 		print index, item
-		curr_node = curr_node.traverse(item)
+		curr_node = curr_node.traverse("forward", item)
 		print "found:%s" %curr_node
 	
+
 
 # box_match
 # From Title #1
@@ -55,5 +56,6 @@ box_match = array([{'function':'from', 'function_param': ['Title', 0]},{'functio
 filename 				= '../image_processing/document_structure/patricia0.json'
 org_document_structure 	= json.loads(open(filename).read())
 
-main(org_document_structure, box_match)
+#instantiate(org_document_structure, box_match)
+
 
