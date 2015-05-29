@@ -44,22 +44,23 @@ check(test("is(Person)"), 				[{"attribute":"isEntity", "attribute_index":0, "ex
 check(test("in("+dictionary_name+")"), 	[{"attribute":"inDict", "attribute_index":0, "expected":"in"}, {"attribute":"inDict", "attribute_index":2, "expected":dictionary_name}])
 # match := permute(rule*)
 # match := rule*
-
+'''
 #----------------------------------------------------------------
 # match := regular_expression  		box := part
-check(test("[A-Z]+[a-z]+ from page"), 	[{"attribute":"regular_expression", "attribute_index":0, "expected":"[A-Z]+[a-z]+"}, {"attribute":"box", "attribute_index":0, "expected":"page"}])
-check(test("[A-Z]+[a-z]+ from section"), 	[{"attribute":"regular_expression", "attribute_index":0, "expected":"[A-Z]+[a-z]+"}, {"attribute":"box", "attribute_index":0, "expected":"section"}])
-check(test("[A-Z]+[a-z]+ from group"), 	[{"attribute":"regular_expression", "attribute_index":0, "expected":"[A-Z]+[a-z]+"}, {"attribute":"box", "attribute_index":0, "expected":"group"}])
+check(test("[A-Z]+[a-z]+ from page"), 		[{"attribute":"regular_expression", "attribute_index":0, "expected":"[A-Z]+[a-z]+"}, {"attribute":"box", "attribute_index":0, "expected":"page"}])
+check(test("[A-Z]+[a-z]+ from section"),	[{"attribute":"regular_expression", "attribute_index":0, "expected":"[A-Z]+[a-z]+"}, {"attribute":"box", "attribute_index":0, "expected":"section"}])
+check(test("[A-Z]+[a-z]+ from group"), 		[{"attribute":"regular_expression", "attribute_index":0, "expected":"[A-Z]+[a-z]+"}, {"attribute":"box", "attribute_index":0, "expected":"group"}])
 check(test("[A-Z]+[a-z]+ from paragraph"), 	[{"attribute":"regular_expression", "attribute_index":0, "expected":"[A-Z]+[a-z]+"}, {"attribute":"box", "attribute_index":0, "expected":"paragraph"}])
-check(test("[A-Z]+[a-z]+ from lines"), 	[{"attribute":"regular_expression", "attribute_index":0, "expected":"[A-Z]+[a-z]+"}, {"attribute":"box", "attribute_index":0, "expected":"lines"}])
+check(test("[A-Z]+[a-z]+ from lines"), 		[{"attribute":"regular_expression", "attribute_index":0, "expected":"[A-Z]+[a-z]+"}, {"attribute":"box", "attribute_index":0, "expected":"lines"}])
 check(test("[A-Z]+[a-z]+ from heading"), 	[{"attribute":"regular_expression", "attribute_index":0, "expected":"[A-Z]+[a-z]+"}, {"attribute":"box", "attribute_index":0, "expected":"heading"}])
-check(test("[A-Z]+[a-z]+ from title"), 	[{"attribute":"regular_expression", "attribute_index":0, "expected":"[A-Z]+[a-z]+"}, {"attribute":"box", "attribute_index":0, "expected":"title"}])
-check(test("[A-Z]+[a-z]+ from line"), 	[{"attribute":"regular_expression", "attribute_index":0, "expected":"[A-Z]+[a-z]+"}, {"attribute":"box", "attribute_index":0, "expected":"line"}])
+check(test("[A-Z]+[a-z]+ from title"), 		[{"attribute":"regular_expression", "attribute_index":0, "expected":"[A-Z]+[a-z]+"}, {"attribute":"box", "attribute_index":0, "expected":"title"}])
+check(test("[A-Z]+[a-z]+ from line"), 		[{"attribute":"regular_expression", "attribute_index":0, "expected":"[A-Z]+[a-z]+"}, {"attribute":"box", "attribute_index":0, "expected":"line"}])
 
-'''
+
 # match := regular_expression  		box := part operator+regex
-test("[A-Z]+[a-z]+ from page after regex")
+check(test("[A-Z]+[a-z]+ from page after regex"), 	[{"attribute":"regular_expression", "attribute_index":0, "expected":"[A-Z]+[a-z]+"}, {"attribute":"part", "attribute_index":0, "expected":"page"},{"attribute":"box_expression", "attribute_index":0, "expected":"after"}, {"attribute":"box_expression", "attribute_index":1, "expected":"regex"}])
 test("[A-Z]+[a-z]+ from page before regex ")
+
 test("[A-Z]+[a-z]+ from page within regex")
 test("[A-Z]+[a-z]+ from page contains regex")
 test("[A-Z]+[a-z]+ from section after regex")
