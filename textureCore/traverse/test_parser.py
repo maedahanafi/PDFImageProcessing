@@ -151,54 +151,59 @@ check(test("[A-Z]+[a-z]+ from line #1 contains [A-Z]+"), 		[{"attribute":"match"
 
 # match := regular_expression 		box := part n [operator box*]
 # match := regular_expression 		box := part n between*
-'''
+
 #----------------------------------------------------------------
 # match := regular_expression 		box := part n to m
-test("[A-Z]+[a-z]+ from page 1 to 3")
-test("[A-Z]+[a-z]+ from section 1 to 3")
-test("[A-Z]+[a-z]+ from group 1 to 3")
-test("[A-Z]+[a-z]+ from paragraph 1 to 3")
-test("[A-Z]+[a-z]+ from lines 1 to 3")
-test("[A-Z]+[a-z]+ from heading 1 to 3")
-test("[A-Z]+[a-z]+ from title 1 to 3")
-test("[A-Z]+[a-z]+ from line 1 to 3")
+# Note: In the from clause, return an array of parts
+check(test("[A-Z]+[a-z]+ from page #1 to #3"), 		[{"attribute":"match", "attribute_index":-1, "expected":"[A-Z]+[a-z]+"}, {"attribute":"part", "attribute_index":0, "expected":"page"}, {"attribute":"n", "attribute_index":1, "expected":'1'}, {"attribute":"m", "attribute_index":1, "expected":"3"}])
+check(test("[A-Z]+[a-z]+ from section #1 to #3"), 	[{"attribute":"match", "attribute_index":-1, "expected":"[A-Z]+[a-z]+"}, {"attribute":"part", "attribute_index":0, "expected":"section"}, {"attribute":"n", "attribute_index":1, "expected":'1'}, {"attribute":"m", "attribute_index":1, "expected":"3"}])
+check(test("[A-Z]+[a-z]+ from group #1 to #3"), 	[{"attribute":"match", "attribute_index":-1, "expected":"[A-Z]+[a-z]+"}, {"attribute":"part", "attribute_index":0, "expected":"group"}, {"attribute":"n", "attribute_index":1, "expected":'1'}, {"attribute":"m", "attribute_index":1, "expected":"3"}])
+check(test("[A-Z]+[a-z]+ from paragraph #1 to #3"), [{"attribute":"match", "attribute_index":-1, "expected":"[A-Z]+[a-z]+"}, {"attribute":"part", "attribute_index":0, "expected":"paragraph"}, {"attribute":"n", "attribute_index":1, "expected":'1'}, {"attribute":"m", "attribute_index":1, "expected":"3"}])
+check(test("[A-Z]+[a-z]+ from lines #1 to #3"), 	[{"attribute":"match", "attribute_index":-1, "expected":"[A-Z]+[a-z]+"}, {"attribute":"part", "attribute_index":0, "expected":"lines"}, {"attribute":"n", "attribute_index":1, "expected":'1'}, {"attribute":"m", "attribute_index":1, "expected":"3"}])
+check(test("[A-Z]+[a-z]+ from heading #1 to #3"), 	[{"attribute":"match", "attribute_index":-1, "expected":"[A-Z]+[a-z]+"}, {"attribute":"part", "attribute_index":0, "expected":"heading"}, {"attribute":"n", "attribute_index":1, "expected":'1'}, {"attribute":"m", "attribute_index":1, "expected":"3"}])
+check(test("[A-Z]+[a-z]+ from title #1 to #3"), 	[{"attribute":"match", "attribute_index":-1, "expected":"[A-Z]+[a-z]+"}, {"attribute":"part", "attribute_index":0, "expected":"title"}, {"attribute":"n", "attribute_index":1, "expected":'1'}, {"attribute":"m", "attribute_index":1, "expected":"3"}])
+check(test("[A-Z]+[a-z]+ from line #1 to #3"), 		[{"attribute":"match", "attribute_index":-1, "expected":"[A-Z]+[a-z]+"}, {"attribute":"part", "attribute_index":0, "expected":"line"}, {"attribute":"n", "attribute_index":1, "expected":'1'}, {"attribute":"m", "attribute_index":1, "expected":"3"}])
+
 # match := regular_expression 		box := part n to m [operator regex]
-test("[A-Z]+[a-z]+ from page 1 to 3 after regex")
-test("[A-Z]+[a-z]+ from page 1 to 3 before regex ")
-test("[A-Z]+[a-z]+ from page 1 to 3 within regex")
-test("[A-Z]+[a-z]+ from page 1 to 3 contains regex")
-test("[A-Z]+[a-z]+ from section 1 to 3 after regex")
-test("[A-Z]+[a-z]+ from section 1 to 3 before regex ")
-test("[A-Z]+[a-z]+ from section 1 to 3 within regex")
-test("[A-Z]+[a-z]+ from section 1 to 3 contains regex")
-test("[A-Z]+[a-z]+ from group 1 to 3 after regex")
-test("[A-Z]+[a-z]+ from group 1 to 3 before regex ")
-test("[A-Z]+[a-z]+ from group 1 to 3 within regex")
-test("[A-Z]+[a-z]+ from group 1 to 3 contains regex")
-test("[A-Z]+[a-z]+ from paragraph 1 to 3 after regex")
-test("[A-Z]+[a-z]+ from paragraph 1 to 3 before regex ")
-test("[A-Z]+[a-z]+ from paragraph 1 to 3 within regex")
-test("[A-Z]+[a-z]+ from paragraph 1 to 3 contains regex")
-test("[A-Z]+[a-z]+ from lines 1 to 3 after regex")
-test("[A-Z]+[a-z]+ from lines 1 to 3 before regex ")
-test("[A-Z]+[a-z]+ from lines 1 to 3 within regex")
-test("[A-Z]+[a-z]+ from lines 1 to 3 contains regex")
-test("[A-Z]+[a-z]+ from heading 1 to 3 after regex")
-test("[A-Z]+[a-z]+ from heading 1 to 3 before regex ")
-test("[A-Z]+[a-z]+ from heading 1 to 3 within regex")
-test("[A-Z]+[a-z]+ from heading 1 to 3 contains regex")
-test("[A-Z]+[a-z]+ from title 1 to 3 after regex")
-test("[A-Z]+[a-z]+ from title 1 to 3 before regex ")
-test("[A-Z]+[a-z]+ from title 1 to 3 within regex")
-test("[A-Z]+[a-z]+ from title 1 to 3 contains regex")
-test("[A-Z]+[a-z]+ from line 1 to 3 after regex")
-test("[A-Z]+[a-z]+ from line 1 to 3 before regex ")
-test("[A-Z]+[a-z]+ from line 1 to 3 within regex")
-test("[A-Z]+[a-z]+ from line 1 to 3 contains regex")
+# Note: Execution order: regex, operator, part n to m (array), match. At any point there is no "match", return to the previous step, however, since n or/and m is specified it is not allowed.
+check(test("[A-Z]+[a-z]+ from page #1 to #3 after [A-Z]+"), 		[{"attribute":"match", "attribute_index":-1, "expected":"[A-Z]+[a-z]+"}, {"attribute":"part", "attribute_index":0, "expected":"page"}, {"attribute":"n", "attribute_index":1, "expected":'1'}, {"attribute":"m", "attribute_index":1, "expected":"3"}, {"attribute":"box_expression", "attribute_index":0, "expected":"after"}, {"attribute":"box_expression", "attribute_index":1, "expected":'[A-Z]+'}])
+check(test("[A-Z]+[a-z]+ from page #1 to #3 before [A-Z]+"), 		[{"attribute":"match", "attribute_index":-1, "expected":"[A-Z]+[a-z]+"}, {"attribute":"part", "attribute_index":0, "expected":"page"}, {"attribute":"n", "attribute_index":1, "expected":'1'}, {"attribute":"m", "attribute_index":1, "expected":"3"}, {"attribute":"box_expression", "attribute_index":0, "expected":"before"}, {"attribute":"box_expression", "attribute_index":1, "expected":'[A-Z]+'}])
+check(test("[A-Z]+[a-z]+ from page #1 to #3 within [A-Z]+"), 		[{"attribute":"match", "attribute_index":-1, "expected":"[A-Z]+[a-z]+"}, {"attribute":"part", "attribute_index":0, "expected":"page"}, {"attribute":"n", "attribute_index":1, "expected":'1'}, {"attribute":"m", "attribute_index":1, "expected":"3"}, {"attribute":"box_expression", "attribute_index":0, "expected":"within"}, {"attribute":"box_expression", "attribute_index":1, "expected":'[A-Z]+'}])
+check(test("[A-Z]+[a-z]+ from page #1 to #3 contains [A-Z]+"), 		[{"attribute":"match", "attribute_index":-1, "expected":"[A-Z]+[a-z]+"}, {"attribute":"part", "attribute_index":0, "expected":"page"}, {"attribute":"n", "attribute_index":1, "expected":'1'}, {"attribute":"m", "attribute_index":1, "expected":"3"}, {"attribute":"box_expression", "attribute_index":0, "expected":"contains"}, {"attribute":"box_expression", "attribute_index":1, "expected":'[A-Z]+'}])
+check(test("[A-Z]+[a-z]+ from section #1 to #3 after [A-Z]+"), 		[{"attribute":"match", "attribute_index":-1, "expected":"[A-Z]+[a-z]+"}, {"attribute":"part", "attribute_index":0, "expected":"section"}, {"attribute":"n", "attribute_index":1, "expected":'1'}, {"attribute":"m", "attribute_index":1, "expected":"3"}, {"attribute":"box_expression", "attribute_index":0, "expected":"after"}, {"attribute":"box_expression", "attribute_index":1, "expected":'[A-Z]+'}])
+check(test("[A-Z]+[a-z]+ from section #1 to #3 before [A-Z]+"), 	[{"attribute":"match", "attribute_index":-1, "expected":"[A-Z]+[a-z]+"}, {"attribute":"part", "attribute_index":0, "expected":"section"}, {"attribute":"n", "attribute_index":1, "expected":'1'}, {"attribute":"m", "attribute_index":1, "expected":"3"}, {"attribute":"box_expression", "attribute_index":0, "expected":"before"}, {"attribute":"box_expression", "attribute_index":1, "expected":'[A-Z]+'}])
+check(test("[A-Z]+[a-z]+ from section #1 to #3 within [A-Z]+"), 	[{"attribute":"match", "attribute_index":-1, "expected":"[A-Z]+[a-z]+"}, {"attribute":"part", "attribute_index":0, "expected":"section"}, {"attribute":"n", "attribute_index":1, "expected":'1'}, {"attribute":"m", "attribute_index":1, "expected":"3"}, {"attribute":"box_expression", "attribute_index":0, "expected":"within"}, {"attribute":"box_expression", "attribute_index":1, "expected":'[A-Z]+'}])
+check(test("[A-Z]+[a-z]+ from section #1 to #3 contains [A-Z]+"), 	[{"attribute":"match", "attribute_index":-1, "expected":"[A-Z]+[a-z]+"}, {"attribute":"part", "attribute_index":0, "expected":"section"}, {"attribute":"n", "attribute_index":1, "expected":'1'}, {"attribute":"m", "attribute_index":1, "expected":"3"}, {"attribute":"box_expression", "attribute_index":0, "expected":"contains"}, {"attribute":"box_expression", "attribute_index":1, "expected":'[A-Z]+'}])
+check(test("[A-Z]+[a-z]+ from group #1 to #3 after [A-Z]+"), 		[{"attribute":"match", "attribute_index":-1, "expected":"[A-Z]+[a-z]+"}, {"attribute":"part", "attribute_index":0, "expected":"group"}, {"attribute":"n", "attribute_index":1, "expected":'1'}, {"attribute":"m", "attribute_index":1, "expected":"3"}, {"attribute":"box_expression", "attribute_index":0, "expected":"after"}, {"attribute":"box_expression", "attribute_index":1, "expected":'[A-Z]+'}])
+check(test("[A-Z]+[a-z]+ from group #1 to #3 before [A-Z]+"), 		[{"attribute":"match", "attribute_index":-1, "expected":"[A-Z]+[a-z]+"}, {"attribute":"part", "attribute_index":0, "expected":"group"}, {"attribute":"n", "attribute_index":1, "expected":'1'}, {"attribute":"m", "attribute_index":1, "expected":"3"}, {"attribute":"box_expression", "attribute_index":0, "expected":"before"}, {"attribute":"box_expression", "attribute_index":1, "expected":'[A-Z]+'}])
+check(test("[A-Z]+[a-z]+ from group #1 to #3 within [A-Z]+"), 		[{"attribute":"match", "attribute_index":-1, "expected":"[A-Z]+[a-z]+"}, {"attribute":"part", "attribute_index":0, "expected":"group"}, {"attribute":"n", "attribute_index":1, "expected":'1'}, {"attribute":"m", "attribute_index":1, "expected":"3"}, {"attribute":"box_expression", "attribute_index":0, "expected":"within"}, {"attribute":"box_expression", "attribute_index":1, "expected":'[A-Z]+'}])
+check(test("[A-Z]+[a-z]+ from group #1 to #3 contains [A-Z]+"), 	[{"attribute":"match", "attribute_index":-1, "expected":"[A-Z]+[a-z]+"}, {"attribute":"part", "attribute_index":0, "expected":"group"}, {"attribute":"n", "attribute_index":1, "expected":'1'}, {"attribute":"m", "attribute_index":1, "expected":"3"}, {"attribute":"box_expression", "attribute_index":0, "expected":"contains"}, {"attribute":"box_expression", "attribute_index":1, "expected":'[A-Z]+'}])
+check(test("[A-Z]+[a-z]+ from paragraph #1 to #3 after [A-Z]+"), 	[{"attribute":"match", "attribute_index":-1, "expected":"[A-Z]+[a-z]+"}, {"attribute":"part", "attribute_index":0, "expected":"paragraph"}, {"attribute":"n", "attribute_index":1, "expected":'1'}, {"attribute":"m", "attribute_index":1, "expected":"3"}, {"attribute":"box_expression", "attribute_index":0, "expected":"after"}, {"attribute":"box_expression", "attribute_index":1, "expected":'[A-Z]+'}])
+check(test("[A-Z]+[a-z]+ from paragraph #1 to #3 before [A-Z]+"), 	[{"attribute":"match", "attribute_index":-1, "expected":"[A-Z]+[a-z]+"}, {"attribute":"part", "attribute_index":0, "expected":"paragraph"}, {"attribute":"n", "attribute_index":1, "expected":'1'}, {"attribute":"m", "attribute_index":1, "expected":"3"}, {"attribute":"box_expression", "attribute_index":0, "expected":"before"}, {"attribute":"box_expression", "attribute_index":1, "expected":'[A-Z]+'}])
+check(test("[A-Z]+[a-z]+ from paragraph #1 to #3 within [A-Z]+"), 	[{"attribute":"match", "attribute_index":-1, "expected":"[A-Z]+[a-z]+"}, {"attribute":"part", "attribute_index":0, "expected":"paragraph"}, {"attribute":"n", "attribute_index":1, "expected":'1'}, {"attribute":"m", "attribute_index":1, "expected":"3"}, {"attribute":"box_expression", "attribute_index":0, "expected":"within"}, {"attribute":"box_expression", "attribute_index":1, "expected":'[A-Z]+'}])
+check(test("[A-Z]+[a-z]+ from paragraph #1 to #3 contains [A-Z]+"), [{"attribute":"match", "attribute_index":-1, "expected":"[A-Z]+[a-z]+"}, {"attribute":"part", "attribute_index":0, "expected":"paragraph"}, {"attribute":"n", "attribute_index":1, "expected":'1'}, {"attribute":"m", "attribute_index":1, "expected":"3"}, {"attribute":"box_expression", "attribute_index":0, "expected":"contains"}, {"attribute":"box_expression", "attribute_index":1, "expected":'[A-Z]+'}])
+check(test("[A-Z]+[a-z]+ from lines #1 to #3 after [A-Z]+"), 		[{"attribute":"match", "attribute_index":-1, "expected":"[A-Z]+[a-z]+"}, {"attribute":"part", "attribute_index":0, "expected":"lines"}, {"attribute":"n", "attribute_index":1, "expected":'1'}, {"attribute":"m", "attribute_index":1, "expected":"3"}, {"attribute":"box_expression", "attribute_index":0, "expected":"after"}, {"attribute":"box_expression", "attribute_index":1, "expected":'[A-Z]+'}])
+check(test("[A-Z]+[a-z]+ from lines #1 to #3 before [A-Z]+"), 		[{"attribute":"match", "attribute_index":-1, "expected":"[A-Z]+[a-z]+"}, {"attribute":"part", "attribute_index":0, "expected":"lines"}, {"attribute":"n", "attribute_index":1, "expected":'1'}, {"attribute":"m", "attribute_index":1, "expected":"3"}, {"attribute":"box_expression", "attribute_index":0, "expected":"before"}, {"attribute":"box_expression", "attribute_index":1, "expected":'[A-Z]+'}])
+check(test("[A-Z]+[a-z]+ from lines #1 to #3 within [A-Z]+"), 		[{"attribute":"match", "attribute_index":-1, "expected":"[A-Z]+[a-z]+"}, {"attribute":"part", "attribute_index":0, "expected":"lines"}, {"attribute":"n", "attribute_index":1, "expected":'1'}, {"attribute":"m", "attribute_index":1, "expected":"3"}, {"attribute":"box_expression", "attribute_index":0, "expected":"within"}, {"attribute":"box_expression", "attribute_index":1, "expected":'[A-Z]+'}])
+check(test("[A-Z]+[a-z]+ from lines #1 to #3 contains [A-Z]+"), 	[{"attribute":"match", "attribute_index":-1, "expected":"[A-Z]+[a-z]+"}, {"attribute":"part", "attribute_index":0, "expected":"lines"}, {"attribute":"n", "attribute_index":1, "expected":'1'}, {"attribute":"m", "attribute_index":1, "expected":"3"}, {"attribute":"box_expression", "attribute_index":0, "expected":"contains"}, {"attribute":"box_expression", "attribute_index":1, "expected":'[A-Z]+'}])
+check(test("[A-Z]+[a-z]+ from heading #1 to #3 after [A-Z]+"), 		[{"attribute":"match", "attribute_index":-1, "expected":"[A-Z]+[a-z]+"}, {"attribute":"part", "attribute_index":0, "expected":"heading"}, {"attribute":"n", "attribute_index":1, "expected":'1'}, {"attribute":"m", "attribute_index":1, "expected":"3"}, {"attribute":"box_expression", "attribute_index":0, "expected":"after"}, {"attribute":"box_expression", "attribute_index":1, "expected":'[A-Z]+'}])
+check(test("[A-Z]+[a-z]+ from heading #1 to #3 before [A-Z]+"), 	[{"attribute":"match", "attribute_index":-1, "expected":"[A-Z]+[a-z]+"}, {"attribute":"part", "attribute_index":0, "expected":"heading"}, {"attribute":"n", "attribute_index":1, "expected":'1'}, {"attribute":"m", "attribute_index":1, "expected":"3"}, {"attribute":"box_expression", "attribute_index":0, "expected":"before"}, {"attribute":"box_expression", "attribute_index":1, "expected":'[A-Z]+'}])
+check(test("[A-Z]+[a-z]+ from heading #1 to #3 within [A-Z]+"), 	[{"attribute":"match", "attribute_index":-1, "expected":"[A-Z]+[a-z]+"}, {"attribute":"part", "attribute_index":0, "expected":"heading"}, {"attribute":"n", "attribute_index":1, "expected":'1'}, {"attribute":"m", "attribute_index":1, "expected":"3"}, {"attribute":"box_expression", "attribute_index":0, "expected":"within"}, {"attribute":"box_expression", "attribute_index":1, "expected":'[A-Z]+'}])
+check(test("[A-Z]+[a-z]+ from heading #1 to #3 contains [A-Z]+"), 	[{"attribute":"match", "attribute_index":-1, "expected":"[A-Z]+[a-z]+"}, {"attribute":"part", "attribute_index":0, "expected":"heading"}, {"attribute":"n", "attribute_index":1, "expected":'1'}, {"attribute":"m", "attribute_index":1, "expected":"3"}, {"attribute":"box_expression", "attribute_index":0, "expected":"contains"}, {"attribute":"box_expression", "attribute_index":1, "expected":'[A-Z]+'}])
+check(test("[A-Z]+[a-z]+ from title #1 to #3 after [A-Z]+"), 		[{"attribute":"match", "attribute_index":-1, "expected":"[A-Z]+[a-z]+"}, {"attribute":"part", "attribute_index":0, "expected":"title"}, {"attribute":"n", "attribute_index":1, "expected":'1'}, {"attribute":"m", "attribute_index":1, "expected":"3"}, {"attribute":"box_expression", "attribute_index":0, "expected":"after"}, {"attribute":"box_expression", "attribute_index":1, "expected":'[A-Z]+'}])
+check(test("[A-Z]+[a-z]+ from title #1 to #3 before [A-Z]+"), 		[{"attribute":"match", "attribute_index":-1, "expected":"[A-Z]+[a-z]+"}, {"attribute":"part", "attribute_index":0, "expected":"title"}, {"attribute":"n", "attribute_index":1, "expected":'1'}, {"attribute":"m", "attribute_index":1, "expected":"3"}, {"attribute":"box_expression", "attribute_index":0, "expected":"before"}, {"attribute":"box_expression", "attribute_index":1, "expected":'[A-Z]+'}])
+check(test("[A-Z]+[a-z]+ from title #1 to #3 within [A-Z]+"), 		[{"attribute":"match", "attribute_index":-1, "expected":"[A-Z]+[a-z]+"}, {"attribute":"part", "attribute_index":0, "expected":"title"}, {"attribute":"n", "attribute_index":1, "expected":'1'}, {"attribute":"m", "attribute_index":1, "expected":"3"}, {"attribute":"box_expression", "attribute_index":0, "expected":"within"}, {"attribute":"box_expression", "attribute_index":1, "expected":'[A-Z]+'}])
+check(test("[A-Z]+[a-z]+ from title #1 to #3 contains [A-Z]+"), 	[{"attribute":"match", "attribute_index":-1, "expected":"[A-Z]+[a-z]+"}, {"attribute":"part", "attribute_index":0, "expected":"title"}, {"attribute":"n", "attribute_index":1, "expected":'1'}, {"attribute":"m", "attribute_index":1, "expected":"3"}, {"attribute":"box_expression", "attribute_index":0, "expected":"contains"}, {"attribute":"box_expression", "attribute_index":1, "expected":'[A-Z]+'}])
+check(test("[A-Z]+[a-z]+ from line #1 to #3 after [A-Z]+"), 		[{"attribute":"match", "attribute_index":-1, "expected":"[A-Z]+[a-z]+"}, {"attribute":"part", "attribute_index":0, "expected":"line"}, {"attribute":"n", "attribute_index":1, "expected":'1'}, {"attribute":"m", "attribute_index":1, "expected":"3"}, {"attribute":"box_expression", "attribute_index":0, "expected":"after"}, {"attribute":"box_expression", "attribute_index":1, "expected":'[A-Z]+'}])
+check(test("[A-Z]+[a-z]+ from line #1 to #3 before [A-Z]+"), 		[{"attribute":"match", "attribute_index":-1, "expected":"[A-Z]+[a-z]+"}, {"attribute":"part", "attribute_index":0, "expected":"line"}, {"attribute":"n", "attribute_index":1, "expected":'1'}, {"attribute":"m", "attribute_index":1, "expected":"3"}, {"attribute":"box_expression", "attribute_index":0, "expected":"before"}, {"attribute":"box_expression", "attribute_index":1, "expected":'[A-Z]+'}])
+check(test("[A-Z]+[a-z]+ from line #1 to #3 within [A-Z]+"), 		[{"attribute":"match", "attribute_index":-1, "expected":"[A-Z]+[a-z]+"}, {"attribute":"part", "attribute_index":0, "expected":"line"}, {"attribute":"n", "attribute_index":1, "expected":'1'}, {"attribute":"m", "attribute_index":1, "expected":"3"}, {"attribute":"box_expression", "attribute_index":0, "expected":"within"}, {"attribute":"box_expression", "attribute_index":1, "expected":'[A-Z]+'}])
+check(test("[A-Z]+[a-z]+ from line #1 to #3 contains [A-Z]+"), 		[{"attribute":"match", "attribute_index":-1, "expected":"[A-Z]+[a-z]+"}, {"attribute":"part", "attribute_index":0, "expected":"line"}, {"attribute":"n", "attribute_index":1, "expected":'1'}, {"attribute":"m", "attribute_index":1, "expected":"3"}, {"attribute":"box_expression", "attribute_index":0, "expected":"contains"}, {"attribute":"box_expression", "attribute_index":1, "expected":'[A-Z]+'}])
+
+
 # match := regular_expression 		box := part n to m [operator box*]
 # match := regular_expression 		box := part n to m between*
 #----------------------------------------------------------------
 
 
 test("is(Person) from title #1 after Education")
-'''
+
