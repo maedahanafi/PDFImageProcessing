@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<document>
+	<line type="TITLE">
+		Maeda
+	</line>
+	<line>
+		77 Laconia ct
+	</line>
+	<line>
+		999-008-3289
+	</line>
+	<paragraph>
+		<line>
+			Educational Experience
+		</line>
+		<line>
+			2014, Harvard Law
+		</line>
+	</paragraph>
+	<paragraph>
+		<line>
+			Work Experience
+		</line>
+		<line>
+			2014, Teaching assistant
+		</line>
+	</paragraph>
+	<paragraph>
+		<line>
+			Publications
+		</line>
+		<line>
+			Magic Tree House books
+		</line>
+	</paragraph>
+</document>

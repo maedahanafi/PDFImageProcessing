@@ -6,7 +6,7 @@ var _ = require('lodash');
 var isConsoleLog 	= true;
 //If you want to debug every single step, enter in 2. Otherwise enter in 1.
 //Make sure that isConsoleLog is true though
-var debugLevel 		= 1;
+var debugLevel 		= 2;
 
 
 /********************************************************************************

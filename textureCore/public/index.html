@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+
+<html ng-app="pdfApp" >
+<head>
+	<title> Texture app </title>
+	<link rel="stylesheet" type="text/css" href="css/bootstrap.css"><!-- load bootstrap -->
+	<link rel="stylesheet" type="text/css" href="css/jquery.jscrollpane.css" />
+	<link rel="stylesheet" type="text/css" href="css/productionContainer.css" />
+	<link rel="styleSheet" href="css/ui-grid-unstable.css"/>
+    <link href="css/opentip.css" rel="stylesheet" type="text/css" />    <!-- fancy tooktips: opentips-->
+
+	<!-- SPELLS -->
+	<!-- <script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script><!-- load jquery -->
+	<script src='js/library/jquery-2.1.0.min.js'></script>
+	 <!--<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-browser/0.0.7/jquery.browser.min.js"></script> <!--Needed to use $.browser -->
+	<script src='js/library/jcanvas.min.js'></script> <!--Jcanvas for our select tool in the canvas via jquery -->
+	<script type="text/javascript" src="js/library/jquery.jscrollpane.min.js"></script>	<!-- the jScrollPane script for pretty scrolls -->
+    <script src="js/library/opentip-jquery.min.js"></script> <!-- fancy tooktips: opentips-->
+    <script type="text/javascript" src="js/library/jquery.mousewheel.js"></script>	<!-- the jScrollPane script for pretty scrolls -->
+	<!--instantiate after some browser sniffing to rule out webkit browsers-->
+	<!--<script type="text/javascript">
+		$(document).ready(function () {if (!$.browser.webkit) {	$('.container').jScrollPane();}	});
+	</script>
+	<!-- JS for canvas scrolls and zooms-->
+	<script type="text/javascript" src="js/library/Animate.js"></script>	
+	<script type="text/javascript" src="js/library/EasyScroller.js"></script>
+	<script type="text/javascript" src="js/library/Scroller.js"></script>
+
+	<!-- Other important js -->
+	<script src="js/library/lodash.js"></script>
+	<script src="js/utils.js"></script>
+	<!-- Plugin to wait for an element to load-->
+	<script src="js/library/arrive.min.js"></script>
+
+
+	<script src='js/library/angular.js'></script>
+	<!--Angular dependencies-->
+	<script src='js/library/angular-route.js'></script>
+	<script src="/js/library/ui-grid-unstable.js"></script>
+	<script src='js/library/ui-bootstrap-tpls-0.12.0.min.js'></script>
+
+	<!-- Main controller files -->
+	<script src='js/appController.js'></script>
+	<!--Controller files-->
+	<script src='js/controller/pdfcontroller.js'></script>
+	<script src='js/controller/pdfOpenController.js'></script>
+	<script src='js/controller/resultController.js'></script>
+	<script src='js/controller/rulesController.js'></script>
+
+
+</head>
+<body ><div class="container" style="" >
+	<!--<img src="imgs/texturelogo.png">-->
+	<h3>Texture</h3>
+	<div class="row">
+
+		<div class="col-md-7" >
+
+			<!-- PDF list -->
+			<div class="panel panel-default">
+				<div class="panel-heading">
+					<!--Header of the PDF panel -->
+					<table style='width:100%'><tr>
+						<td style="width:20%;">
+							<h4>List of resumes</h4>
+						</td>
+						<td>
+							<div id="toolbox" ng-include="'partials/toolbox.html'"></div>
+						</td>
+
+
+						<td align="right">
+							<div class="col-sm-10" style="float:right">
+								<div class="input-group " aria-label="Right Align" >
+									<span class="input-group-addon" id="basic-addon1">
+										<span class="glyphicon glyphicon-search"  ></span>
+									</span>
+									<input type="text" ng-model="searchText" class="form-control input-sm" aria-describedby="basic-addon1"/><!--{{searchText}}-->
+								</div>
+							</div>
+
+						</td>
+					</tr></table>
+				</div>
+				<div id="pdf_list_div" class="panel-body" style='width:inherit' ng-controller="pdfController" >
+
+					<!-- PDF list/partial when open  -->
+					<table class='pdfTables' style='width:100%'  >
+						<tr ng-repeat="pdf_file in pdf_list | filter:searchText | limitTo:limit " style='width:inherit'>
+							<td >
+								<div class="pdfTableRow">
+									<a  ng-click="currentTpl='partials/pdfContainer.html'; showPDF=!showPDF; loadpdf( pdf_file.filename);" type="button" class="btn btn-default" style='width:100%' >
+                                            <div style="text-align: left;" ng-show="!showPDF">
+                                                <span class="glyphicon glyphicon-chevron-right" ></span>
+                                                {{pdf_file.filename}}
+                                            </div>
+                                            <div style="text-align: left;" ng-show="showPDF">
+                                                <span class="glyphicon glyphicon-chevron-down" ></span>
+                                                {{pdf_file.filename}}
+                                            </div>
+									</a>
+									<div id="pdfContent" ng-include="currentTpl"></div>
+								</div>
+
+							</td>
+						</tr>
+
+					</table>
+
+					<a href ng-click="incrementLimit()" type="button" ng-show="limit!=pdf_list.length">More</a>
+					<a href ng-click="showAll()" type="button" ng-show="limit!=pdf_list.length">All</a>
+					<a href ng-click="decrementLimit()" type="button" ng-show="limit>limitStep">Less</a>
+				</div>
+			</div>
+
+		</div>
+
+		<!-- Results and Scripts-->
+		<div class="col-md-5">
+
+			<div class="row" ng-include="'partials/rulesContainer.html'" >
+
+			</div>
+
+			<div class="row" ng-include="'partials/resultsContainer.html'">
+
+			</div>
+		</div>
+
+	</div>
+
+
+	<script>
+
+
+
+	</script>
+
+
+</div></body>

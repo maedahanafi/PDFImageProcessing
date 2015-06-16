@@ -1,0 +1,213 @@
+<!-- Decorative tags: http://mbenford.github.io/ngTagsInput/demos.html -->
+
+
+
+<div class="panel panel-default" ng-controller="productionController" ng-init="rule1_isExtract = false; rule2_isExtract = false; rule3_isExtract = false;">
+
+    <div class="panel-body" >
+       <!-- <div  ui-grid="gridOptions" class="extractionRulesTable" ui-grid-resize-columns ui-grid-edit >
+
+        </div>-->
+        <style type="text/css">
+            .in, .after, .from {
+                color: #2a1cff;
+            }
+            .operator {
+                color: #a00b4e;
+            }
+            .regex {
+                color: #000000;
+            }
+            .extractionRulesTable {
+                table-layout:fixed;
+                width:100%;
+            }
+            .separating_line {
+                border-top: 1px #b8b8b8 dotted; /* top border only */
+                /*width: 100%;*/
+            }
+            .separating_line_bold {
+                border-top: 2px #000000 solid; /* top border only */
+            }
+            .extractionPhrase{
+                color: #15e831;
+            }
+            .extractionRulesTable td{
+                padding: 3px;
+            }
+            .string{
+                color: #999999;
+            }
+            .extractionRulesTable tr{
+                /*width: 100%;*/
+            }
+            .box{
+                color: #e82870;
+            }
+            .labels{
+                color: #520b0d;
+            }
+            .scroll{
+                height:200px; width:500px; overflow-y:scroll;
+                overflow-x: hidden;
+            }
+
+        </style>
+        <div class="scroll">
+            <div class="row"  >
+                <div class="progress progress-striped active" ng-show="showLoadLearning" >
+                    <div class="progress-bar"  role="progressbar"  aria-valuenow="10" aria-valuemin="0" aria-valuemax="100"  style="width: 100%" ng-show="showLoadLearning">
+                    </div>
+                </div>
+
+            </div>
+            <table style="font-family: Consolas;" class="extractionRulesTable" ng-show="showSuggestedRules">
+                <thead>
+                    <h4>Suggestions</h4>
+                </thead>
+                <tr class="separating_line" bgcolor="#ffffe0" ng-show="!rule1_isExtract">
+                    <td style="width:80%">
+                        <span class="school"> School</span> <span class="operator">:=</span> <span class="regex">[A-Za-z\s]+</span><span class="string">'SCHOOL'</span> | </br>
+                        &emsp;&emsp;&emsp;&emsp;        <span class="regex">[A-Za-z\s]+</span><span class="string">'University'</span><br>
+                        &emsp;&emsp;&emsp;&emsp;        <span class="in">within</span><span class="box"> page #1 </span><br>
+
+                    </td>
+                    <td  >
+                        <button type="button" class="btn btn-default  btn-sm" ng-click="rule1_isExtract = !rule1_isExtract; runRule()"><span class="glyphicon glyphicon-plus" ></span></button>
+                    </td>
+                </tr>
+                <tr class="separating_line" bgcolor="#ffffe0" ng-show="!rule2_isExtract">
+                    <td style="width:80%">
+                        <span class="school"> School</span> <span class="operator">:=</span> <span class="from">in</span> school_list <br>
+                    </td>
+                    <td  >
+                        <button type="button" class="btn btn-default  btn-sm" ng-click="rule2_isExtract = !rule2_isExtract; runRule()"><span class="glyphicon glyphicon-plus" ></span></button>
+                    </td>
+                </tr>
+                <tr class="separating_line" bgcolor="#ffffe0" ng-show="!rule3_isExtract">
+                    <td style="width:80%">
+                        <span class="school"> School</span> <span class="operator">:=</span> <span class="regex">[A-Za-z\s]+</span><span class="string">'University'</span> | </br>
+                        &emsp;&emsp;&emsp;&emsp;             <span class="from">in</span> school_list | </br>
+                        &emsp;&emsp;&emsp;&emsp;            <span class="string">'University of '</span><span class="regex">[A-Za-z\s]+</span><br>
+                    </td>
+                    <td  >
+                        <button type="button" class="btn btn-default  btn-sm" ng-click="rule3_isExtract = !rule3_isExtract; runRule()"><span class="glyphicon glyphicon-plus" ></span></button>
+                    </td>
+                </tr>
+                <!--<tr class="separating_line">
+                    <td style="width:90%">
+                        <span class="name"> Name</span> <span class="operator">:=</span> <span class="regex">[A-Za-z]+\s*[A-Za-z]+ </span><br>
+                        &emsp;&emsp;&emsp;&emsp;        <span class="from">from</span> <span class="box">title</span> <br>
+
+                    </td>
+                    <td  >
+                        <button type="button" class="btn btn-default  btn-sm"><span class="glyphicon glyphicon-plus" ></span></button>
+                    </td>
+                </tr>
+                <tr class="separating_line">
+                    <td style="width:90%">
+                        <span class="name"> Name</span> <span class="operator">:=</span> <span class="from">is</span> person <br>
+                        &emsp;&emsp;&emsp;&emsp;        <span class="from">from</span> <span class="box">line #1</span> <br>
+                        &emsp;&emsp;&emsp;&emsp;        <span class="in">within</span><span class="box"> page #1 </span><br>
+
+                    </td>
+                    <td  >
+                        <button type="button" class="btn btn-default  btn-sm"><span class="glyphicon glyphicon-plus" ></span></button>
+                    </td>
+                </tr>
+                <tr class="separating_line">
+                    <td style="width:90%">
+                        <span class="name"> Name</span> <span class="operator">:=</span> <span class="regex">[A-Z]+\s+[A-Z]+ </span><br>
+                        &emsp;&emsp;&emsp;&emsp;        <span class="from">from</span> <span class="box">line #1</span> <br>
+                        &emsp;&emsp;&emsp;&emsp;        <span class="in">within</span><span class="box"> page #1 </span><br>
+
+                    </td>
+                    <td  >
+                        <button type="button" class="btn btn-default  btn-sm"><span class="glyphicon glyphicon-plus" ></span></button>
+                    </td>
+                </tr>-->
+
+            </table>
+        </div>
+        <div class="separating_line_bold"></div>
+        <div class="scroll">
+
+            <table style="font-family: Consolas;" class="extractionRulesTable">
+                <thead>
+                    <h4>Extraction Rules</h4>
+                </thead>
+                <tr class="separating_line" bgcolor="#ffffe0" ng-show="rule1_isExtract">
+                    <td style="width:80%">
+                        <span class="school"> School</span> <span class="operator">:=</span> <span class="regex">[A-Za-z\s]+</span><span class="string">'SCHOOL'</span> | </br>
+                        &emsp;&emsp;&emsp;&emsp;        <span class="regex">[A-Za-z\s]+</span><span class="string">'University'</span><br>
+                        &emsp;&emsp;&emsp;&emsp;        <span class="in">after</span><span class="box"> title  </span><span class="string">'Education'</span><br>
+
+                    </td>
+                    <td  >
+                        <button type="button" class="btn btn-default  btn-sm" ng-click="rule1_isExtract = !rule1_isExtract; runRule()"><span class="glyphicon glyphicon-minus" ></span></button>
+                        <button type="button" class="btn btn-default  btn-sm"><span class="glyphicon glyphicon-pencil" ></span></button>
+                    </td>
+                </tr>
+                <tr class="separating_line" bgcolor="#ffffe0" ng-show="rule2_isExtract">
+                    <td style="width:80%">
+                        <span class="school"> School</span> <span class="operator">:=</span> <span class="from">in</span> school_list <br>
+                    </td>
+                    <td  >
+                        <button type="button" class="btn btn-default  btn-sm" ng-click="rule2_isExtract = !rule2_isExtract; runRule()"><span class="glyphicon glyphicon-minus" ></span></button>
+                        <button type="button" class="btn btn-default  btn-sm"><span class="glyphicon glyphicon-pencil" ></span></button>
+                    </td>
+                </tr>
+                <tr class="separating_line" bgcolor="#ffffe0" ng-show="rule3_isExtract">
+                    <td style="width:80%">
+                        <span class="school"> School</span> <span class="operator">:=</span> <span class="regex">[A-Za-z\s]+</span><span class="string">'University'</span> | </br>
+                        &emsp;&emsp;&emsp;&emsp;             <span class="from">in</span> school_list | </br>
+                        &emsp;&emsp;&emsp;&emsp;            <span class="string">'University of '</span><span class="regex">[A-Za-z\s]+</span><br>
+                    </td>
+                    <td  >
+                        <button type="button" class="btn btn-default  btn-sm" ng-click="rule3_isExtract = !rule3_isExtract; runRule()"><span class="glyphicon glyphicon-minus" ></span></button>
+                        <button type="button" class="btn btn-default  btn-sm"><span class="glyphicon glyphicon-pencil" ></span></button>
+                    </td>
+                </tr>
+                <!--<tr class="separating_line" >
+                    <td style="width:80%">
+                        <span class="education"> Education</span> <span class="operator">:=</span> <span class="from    ">permute</span> ( <span class="school">School</span>, <span class="year">Year</span> )<br>
+                        &emsp;&emsp;&emsp;&emsp;            <span class="from">from</span> <span class="box">section </span><br>
+                        &emsp;&emsp;&emsp;&emsp;           <span class="in">after</span> <span class="box">heading <span class="from">contains</span> <span class="string">'Education'</span> </span><br>
+                    </td>
+                    <td  >
+                        <button type="button" class="btn btn-default  btn-sm"><span class="glyphicon glyphicon-minus" ></span></button>
+                        <button type="button" class="btn btn-default  btn-sm"><span class="glyphicon glyphicon-pencil" ></span></button>
+                    </td>
+                </tr>
+
+                <tr class="separating_line" bgcolor="#ffffe0">
+                    <td style="width:80%">
+                       <span class="school"> School</span> <span class="operator">:=</span> <span class="regex">[A-Za-z\s]+</span><span class="string">'University'</span> | </br>
+                        &emsp;&emsp;&emsp;&emsp;             <span class="from">in</span> school_list | </br>
+                        &emsp;&emsp;&emsp;&emsp;            <span class="string">'University of '</span><span class="regex">[A-Za-z\s]+</span><br>
+                    </td>
+                    <td  >
+                        <button type="button" class="btn btn-default  btn-sm"><span class="glyphicon glyphicon-minus" ></span></button>
+                        <button type="button" class="btn btn-default  btn-sm"><span class="glyphicon glyphicon-pencil" ></span></button>
+                    </td>
+                </tr>
+                <tr class="separating_line">
+                    <td style="width:80%">
+                        <span class="year"> Year </span><span class="operator">:=</span> <span class="regex">\d\d\d\d</span><br>
+
+                    </td>
+                    <td  >
+                        <button type="button" class="btn btn-default  btn-sm"><span class="glyphicon glyphicon-minus" ></span></button>
+                        <button type="button" class="btn btn-default  btn-sm"><span class="glyphicon glyphicon-pencil" ></span></button>
+                    </td>
+                </tr>-->
+
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<style>
+
+</style>

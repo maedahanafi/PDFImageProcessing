@@ -17,12 +17,12 @@ exports.pdf2image = function(input, output){
                 path_to_pdf_img_dir+filename+'.'+img_ext]*/
             ['-verbose',        //Solving the issue of dark images converted     http://stackoverflow.com/questions/10934456/imagemagick-pdf-to-jpgs-sometimes-results-in-black-background
                 '-density',
-                '400',
+                '150',
                 '-colorspace',
                 'sRGB',
                 input, 
                 '-resize',
-                '400%',
+                '50%',
                 '-quality',
                 '95',
                 output],
@@ -118,7 +118,10 @@ exports.img2blackandwhite = function img2blackandwhite(inputfile, outputfile, ca
 
 
 // too blurry
-function transparency2white(inputfile, outputfile, callback) {
+function transparency2white(inputfile, outputfile) {
+    var Q           = require('Q');
+    var deferred    = Q.defer();
+
     //First convert the image's transparency into white color
     //convert -flatten img1.png img1-white.png
 
@@ -130,13 +133,16 @@ function transparency2white(inputfile, outputfile, callback) {
      function(err, stdout){
          if (err){
             console.log(err);
+            deferred.reject(err)
          }else {
-            console.log('stdout:', stdout);
+            //console.log('stdout:', stdout);
+            deferred.resolve(stdout)
          }
-         callback();
+         //callback();
 
      }
      );
+    return deferred.promise;
 }
 exports.transparency2white =transparency2white;
 

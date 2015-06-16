@@ -1,0 +1,43 @@
+<!-- Fancy tables all thanks to http://ui-grid.info/ -->
+<div class="panel panel-default" ng-controller="resultController" >
+    <alert ng-repeat="alert in alerts" type="{{alert.type}}" close="closeAlert($index)">{{alert.msg}}</alert>
+    <div class="panel-heading">
+
+        <form ng-submit="submit_keyword()">
+            <h4>Results</h4>
+
+            <div class="input-group " aria-label="Right Align">
+
+                <!--<input type="text" ng-model="search_box" name="search_box" class="form-control input-sm" placeholder="Enter labels to extract" aria-describedby="basic-addon1"/><!--{{searchText}}-->
+                <!--
+                <span class="input-group-addon" id="basic-addon1">
+                    <span class="glyphicon glyphicon-plus"  ></span>
+                </span>
+                -->
+            </div>
+
+         </form>
+    </div>
+    <div class="panel-body" >
+        <div class="progress progress-striped active" ng-show="showLoadResults" >
+            <div class="progress-bar"  role="progressbar"  aria-valuenow="10" aria-valuemin="0" aria-valuemax="100"  style="width: 100%" ng-show="showLoadResults">
+            </div>
+        </div>
+        <div  ui-grid="gridOptions" class="myGrid" ui-grid-resize-columns ui-grid-edit ng-show="showResults">
+
+        </div>
+
+    </div>
+    <div class="panel-footer">
+       <!-- <button type="button" id="addData" class="btn btn-success btn-sml" ng-click="addData()">
+            Add Data <span class="glyphicon glyphicon-plus" aria-hidden="true" ></span>
+        </button>-->
+        <button type="button" class="btn btn-default btn-sml">
+            Export To ...
+        </button>
+    </div>
+</div>
+<style>
+
+</style>
+<!--<style> .scrollable_table{ height:300px; width:300px; overflow:scroll; }</style>-->

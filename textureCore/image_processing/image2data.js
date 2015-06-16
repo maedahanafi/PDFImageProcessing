@@ -30,7 +30,7 @@ var doc_struct_dir  = 'document_structure/';
 //imagedocuments2structure(['img/nagy-1BW.png'], true)
 //imagedocuments2structure(['img/michael1-ver2.png'], true)
 //imagedocuments2structure(['img/miller0.png'], true)
-imagedocuments2structure(['img/patricia0.png'], true)
+/*imagedocuments2structure(['img/patricia0.png'], true)
 .then(imagedocuments2structure(['img/worthy0.png', 'img/worthy1.png'], true))
 .then(imagedocuments2structure(['img/miller0.png', 'img/miller1.png'], true))
 .then(imagedocuments2structure(['img/patricia0.png', 'img/patricia1.png'], true))

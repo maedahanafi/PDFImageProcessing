@@ -1,0 +1,41 @@
+
+<!-- Angularjs PDF.js module: https://github.com/akrennmair/ng-pdfviewer
+
+	Infomration on how the scope of controllers work:
+	http://stackoverflow.com/questions/16137053/angularjs-how-to-restrict-scope-on-ngclick-in-multiple-instances
+	Thus we instantiate a controller, pdfOpenController, for each pdf -->
+
+<div id="pdfContainer"   class="text-center container" >
+	<div class="wrapper" ng-controller="pdfOpenController" >
+		<div ng-show="showPDF" class="ng-hide"  >
+			<!--p This is where we show the pdf: -->
+
+			<div class="row"  >
+				<div class="progress progress-striped active" ng-show="showprogress" >
+					<div class="progress-bar"  role="progressbar"  aria-valuenow="10" aria-valuemin="0" aria-valuemax="100"  style="width: 100%" ng-show="showprogress">
+					</div>
+				</div>
+
+			</div>
+			<div class="row" id="par">
+				<style>/* .scrollable{ height:300px; overflow:scroll; }*/</style>
+				<!-- Dynamically set a width-->
+				<script> </script>
+				<div >
+                    <!--<div class="scrollable">-->
+					    <canvas style="width: 600px; height:300px" id="{{canvas_id}}"  ></canvas>
+                    <!--</div>-->
+				</div>
+			</div>
+
+		</div>
+	</div>
+
+</div>
+<script>
+
+
+</script>
+<style>
+
+</style>
