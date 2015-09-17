@@ -7,6 +7,10 @@ function isExists(array, item){
     return _.indexOf(array, item) == -1;
 }
 
-
-
+var debugLevel = 0;
+function printDebug(string, inDebugLevel){
+	if(inDebugLevel<=debugLevel){
+		console.log(string);
+	}
+}
 

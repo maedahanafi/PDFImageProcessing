@@ -44,7 +44,7 @@ from PIL import Image, ImageDraw, ImageFilter
 import numpy as np
 from scipy.ndimage.filters import rank_filter
 
-from custom_box import assign_line_type
+from assign_attributes import assign_line_type, recognize_text
 
 
 
@@ -80,7 +80,7 @@ def vertical_additions(addition, crop, im_size):
     return x1, y1, x2, y2 
 
 
-def crop_per_line(im, contours, edges):
+def crop_per_line(im, out_path, contours, edges):
 
     # This is up to the point where we need to process the contours on our own
     # Grab the contours and crop them into their own individual images
@@ -370,25 +370,29 @@ def downscale_image(im, max_dim=2048):
     return scale, new_im
 
 
-def process_image(path, out_path):
+def process_image(path, out_path, verbose, is_display_image):
     original_im = Image.open(path)
     scale, im   = downscale_image(original_im)
 
-    # print "begin parse"
+    if verbose:
+        print "begin parse"
 
     # Continuously extract text areas
     edges, contours = extract_text_area(im)
     if len(contours) == 0:
         return  
 
-    # print "done extracting text areas"  
+    if verbose:
+        print "done extracting text areas"  
       
     document_structure  = list()
     c_info              = props_for_contours(contours, edges)
     c_info.sort(key=lambda x: x['y1'])
 
     draw    = ImageDraw.Draw(im)
-    # print "done contouring"  
+
+    if verbose:
+        print "done contouring"  
 
     # Cropping per line on a text_area and find the contours of each line
     for c in c_info:
@@ -397,8 +401,11 @@ def process_image(path, out_path):
         text_area_edges         = extract_line_edges(text_area)  #extract_edges(text_area)
         horizontal_length       = text_area.size[0]
 
-        # print "done extracting a line"  
-        #draw.rectangle(text_area_crop, outline='blue')
+        if verbose:
+            print "done extracting a line"  
+
+        if is_display_image:
+            draw.rectangle(text_area_crop, outline='blue')
 
 
         # We will dilate horizontally instead of horizontally and vertically
@@ -406,20 +413,25 @@ def process_image(path, out_path):
         text_area_contours      = find_components(text_area_edges, horizontal_length, horizontal)
 
         if len(text_area_contours) != 0:
-            #draw.rectangle(this_crop, outline='blue')
+            if is_display_image:
+                draw.rectangle(this_crop, outline='blue')
             
             # For each text area divide it by lines
-            page_lines          = crop_per_line(text_area, text_area_contours, text_area_edges)
+            page_lines          = crop_per_line(text_area, out_path, text_area_contours, text_area_edges)
             document_structure.append({'group':page_lines})
 
-            # Printing the information will send it to the nodejs process
-            # print json.dumps({'data':page_lines})
-    #edges.show()
+    if is_display_image:
+        edges.show()
 
     document_structure.sort(key=lambda x: x['group'][0]['y1'])
     document_structure          = assign_line_type(document_structure)
+    document_structure          = recognize_text(document_structure)
+
+    # Printing the information will send it to the nodejs process
     print json.dumps({'data':document_structure})
-    return json.dumps({'data':document_structure})
+
+    return document_structure#json.dumps({'data':document_structure})
+
 
 if __name__ == '__main__':
     if len(sys.argv) == 2 and '*' in sys.argv[1]:
@@ -433,7 +445,7 @@ if __name__ == '__main__':
         if os.path.exists(out_path): continue
         try:
             #print("Process images")
-            process_image(path, out_path)
+            process_image(path, out_path, False, False)
         except Exception as e:
             print '%s %s' % (path, e)
 
